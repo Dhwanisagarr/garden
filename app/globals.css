@@ -1,0 +1,138 @@
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,400&family=Caveat:wght@500;600&family=Inter:wght@400;500&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* DAISY Light Theme - warm, organic paper */
+    --background: 39 41% 94%;          /* #F7F3EA */
+    --foreground: 30 8% 28%;           /* #4F4A44 */
+    --card: 39 41% 96%;
+    --card-foreground: 30 8% 28%;
+    --popover: 39 41% 96%;
+    --popover-foreground: 30 8% 28%;
+    --primary: 31 35% 45%;             /* clay brown #9A744A */
+    --primary-foreground: 39 41% 96%;
+    --secondary: 86 25% 76%;           /* sage #C6D3B2 */
+    --secondary-foreground: 30 8% 28%;
+    --muted: 39 30% 88%;
+    --muted-foreground: 30 8% 45%;
+    --accent: 45 67% 65%;              /* butter yellow #E3C66A */
+    --accent-foreground: 30 8% 28%;
+    --destructive: 0 50% 50%;
+    --destructive-foreground: 39 41% 96%;
+    --border: 30 15% 80%;
+    --input: 30 15% 80%;
+    --ring: 31 35% 45%;
+    --radius: 0.5rem;
+
+    /* Daisy custom colors */
+    --daisy-bg: 39 41% 94%;
+    --daisy-sage: 86 25% 76%;
+    --daisy-butter: 45 67% 65%;
+    --daisy-clay: 31 35% 45%;
+    --daisy-text: 30 8% 28%;
+    --daisy-paper: 39 50% 97%;
+    --daisy-ink: 30 20% 35%;
+  }
+
+  .dark {
+    /* DAISY Dark Theme - forest cozy */
+    --background: 108 11% 13%;         /* #1F251E */
+    --foreground: 36 18% 87%;          /* #EAE4DA */
+    --card: 108 13% 19%;               /* #2D382B */
+    --card-foreground: 36 18% 87%;
+    --popover: 108 13% 19%;
+    --popover-foreground: 36 18% 87%;
+    --primary: 36 18% 80%;             /* warm beige #D8D0C4 */
+    --primary-foreground: 108 11% 13%;
+    --secondary: 100 16% 39%;          /* muted green #5E7253 */
+    --secondary-foreground: 36 18% 87%;
+    --muted: 108 10% 22%;
+    --muted-foreground: 36 14% 70%;
+    --accent: 100 16% 45%;
+    --accent-foreground: 36 18% 87%;
+    --destructive: 0 40% 45%;
+    --destructive-foreground: 36 18% 87%;
+    --border: 108 10% 28%;
+    --input: 108 10% 28%;
+    --ring: 36 18% 80%;
+
+    --daisy-bg: 108 11% 13%;
+    --daisy-sage: 100 16% 39%;
+    --daisy-butter: 36 18% 80%;
+    --daisy-clay: 36 18% 80%;
+    --daisy-text: 36 18% 87%;
+    --daisy-paper: 108 13% 19%;
+    --daisy-ink: 36 14% 75%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  html, body {
+    @apply bg-background text-foreground;
+    font-family: 'Fraunces', Georgia, serif;
+    font-feature-settings: 'ss01', 'ss02';
+    overscroll-behavior: none;
+  }
+  body {
+    background-image:
+      radial-gradient(hsl(var(--daisy-ink) / 0.04) 1px, transparent 1px),
+      radial-gradient(hsl(var(--daisy-ink) / 0.025) 1px, transparent 1px);
+    background-size: 32px 32px, 17px 17px;
+    background-position: 0 0, 8px 11px;
+  }
+}
+
+@layer utilities {
+  .font-serif-display { font-family: 'Fraunces', Georgia, serif; }
+  .font-handwritten { font-family: 'Caveat', cursive; }
+  .font-sans-clean { font-family: 'Inter', system-ui, sans-serif; }
+
+  .paper-tile {
+    background-color: hsl(var(--daisy-paper));
+    box-shadow:
+      0 1px 0 hsl(var(--daisy-ink) / 0.04),
+      0 1px 3px hsl(var(--daisy-ink) / 0.08),
+      inset 0 0 0 1px hsl(var(--daisy-ink) / 0.05);
+  }
+
+  /* hand-drawn looking border using svg mask */
+  .hand-drawn-border {
+    position: relative;
+  }
+  .hand-drawn-border::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    background: transparent;
+    border: 1.5px solid hsl(var(--daisy-ink) / 0.35);
+    filter: url(#wobble);
+    opacity: 0.8;
+  }
+  .dark .hand-drawn-border::before {
+    border-color: hsl(var(--daisy-text) / 0.35);
+  }
+
+  .tile-shadow {
+    box-shadow: 0 2px 8px -2px hsl(var(--daisy-ink) / 0.15), 0 1px 2px hsl(var(--daisy-ink) / 0.08);
+  }
+
+  .scrollbar-none::-webkit-scrollbar { display: none; }
+  .scrollbar-none { scrollbar-width: none; }
+
+  /* tiny petal float */
+  @keyframes petal-float {
+    0%   { transform: translate(0,0) rotate(0); opacity: 0; }
+    20%  { opacity: 1; }
+    100% { transform: translate(var(--dx, 40px), var(--dy, 60px)) rotate(var(--rot, 90deg)); opacity: 0; }
+  }
+  .animate-petal { animation: petal-float 2.2s ease-out forwards; }
+}
