@@ -151,6 +151,18 @@ frontend:
         agent: "main"
         comment: "Rewrote bloom renderer so each memory = stem + leaves + full flower head, with natural variation (height, sway, scale, layered back/front). Renamed Sept-Dec to new identities (Golden Wildflowers, Maple Sprigs, Pine+Berries, Holly+Berries). Added month-themed ParticleSVG (snowflakes, tulip petals, maple leaves, holly, etc.) used both for upload petals and celebration drift. Added full-month completion detection (persisted per-month in localStorage) that triggers butterflies in light theme / fireflies in dark theme + drifting petals + subtle handwritten message 'Your June garden has fully bloomed.' Added minimal search field in top-right supporting month names, years, exact dates, day numbers; selecting a result navigates to the month and briefly highlights the matching tile with a butter+clay ring. Verified all states via Playwright: 15-bloom lush sidebar, 30-bloom completed celebration with butterflies + message, July->Lavender botanical, search dropdown + jump."
 
+  - task: "Monthly export (PDF + PNG)"
+    implemented: true
+    working: true
+    file: "components/ExportPanel.jsx, components/ExportSheet.jsx, lib/export.js, app/page.js, package.json"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "main"
+        comment: "Added bottom-right botanical leaf-arrow icon with tooltip 'Preserve this month' (disabled state 'Add memories to preserve this month.' with reduced opacity). Click opens a small handcrafted popover with 'as a PDF page (A4)' / 'as a PNG keepsake (HiRes)'. Built an offscreen ExportSheet (A4 portrait 794x1123) composing the DAISY logo, month+year title, full calendar with memory thumbnails, Botanical illustration, quote 'Ordinary days, gently kept.', and a conditional 'Your <Month> garden fully bloomed.' note when all days are filled. Uses html2canvas-pro@1.5.7 for rasterization at scale=3 (~288 DPI) and jsPDF@2.5.2 for A4 PDF generation. Verified via Playwright: PNG download named DAISY_June_2026.png at 2382x3369 px, PDF download named DAISY_June_2026.pdf at 303 KB; vision analysis confirms the printed layout includes logo, title, calendar with memory tiles, sunflower botanical, and quote. Disabled state verified when no memories present. No existing layouts, typography, colors, themes, search, or upload UX were modified."
+
 metadata:
   created_by: "main_agent"
   version: "1.0"

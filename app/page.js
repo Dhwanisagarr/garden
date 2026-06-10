@@ -9,6 +9,9 @@ import DaisyToggle from '@/components/DaisyToggle'
 import Botanical from '@/components/Botanical'
 import SVGDefs from '@/components/SVGDefs'
 import { ParticleSVG, Butterfly, Firefly } from '@/components/Particles'
+import ExportPanel from '@/components/ExportPanel'
+import ExportSheet from '@/components/ExportSheet'
+import { exportAsPDF, exportAsPNG } from '@/lib/export'
 import { botanicalForMonth } from '@/lib/botanicals'
 import { dateKey, putImage, deleteImage, getMonthImages, listAllMemoryKeys } from '@/lib/daisy-db'
 
@@ -43,6 +46,32 @@ function App() {
   const [searchResults, setSearchResults] = useState([])
   const fileInputRef = useRef(null)
   const pendingDayRef = useRef(null)
+  const exportSheetRef = useRef(null)
+
+  // Export handlers (delegated to lib/export with the offscreen ExportSheet)
+  const buildExportFilename = (ext) =>
+    `DAISY_${MONTH_NAMES[month - 1]}_${year}.${ext}`
+
+  const handleExportPDF = async () => {
+    if (!exportSheetRef.current) return
+    try {
+      await exportAsPDF(exportSheetRef.current, buildExportFilename('pdf'))
+      toast.success('Saved as PDF', { description: `${MONTH_NAMES[month-1]} ${year}` })
+    } catch (e) {
+      console.error('PDF export failed', e)
+      toast.error('Could not export PDF')
+    }
+  }
+  const handleExportPNG = async () => {
+    if (!exportSheetRef.current) return
+    try {
+      await exportAsPNG(exportSheetRef.current, buildExportFilename('png'))
+      toast.success('Saved as PNG', { description: `${MONTH_NAMES[month-1]} ${year}` })
+    } catch (e) {
+      console.error('PNG export failed', e)
+      toast.error('Could not export PNG')
+    }
+  }
 
   // ----- mount: theme + load images
   useEffect(() => {
@@ -379,8 +408,19 @@ function App() {
               </motion.div>
             </AnimatePresence>
           </div>
+
+          {/* Export — botanical icon at bottom-right of the calendar page */}
+          <ExportPanel
+            disabled={Object.keys(images).length === 0}
+            monthLabel={`${MONTH_NAMES[month-1]} ${year}`}
+            onExportPDF={handleExportPDF}
+            onExportPNG={handleExportPNG}
+          />
         </main>
       </div>
+
+      {/* Offscreen export sheet (rendered hidden, captured by html2canvas) */}
+      <ExportSheet ref={exportSheetRef} year={year} month={month} images={images} />
 
       {/* Celebration overlay (full month bloomed) */}
       <CelebrationOverlay celebration={celebration} isDark={isDark} />
