@@ -1,5 +1,6 @@
 'use client'
 import { motion } from 'framer-motion'
+import { PALETTES } from '@/lib/botanicals'
 
 // Deterministic pseudo-random based on index, so positions are stable
 function prand(i, salt = 0) {
@@ -7,129 +8,152 @@ function prand(i, salt = 0) {
   return x - Math.floor(x)
 }
 
-function Stem({ x, y, length = 90, sway = 0, color = '#5E7253' }) {
-  const cx = x + Math.sin(sway) * 12
-  return (
-    <path
-      d={`M ${x} ${y} Q ${cx} ${y - length / 2}, ${x + sway * 6} ${y - length}`}
-      stroke={color} strokeWidth="2" fill="none" strokeLinecap="round"
-    />
-  )
-}
-
-function Leaf({ x, y, rotate = 0, color = '#7a8f6a' }) {
-  return (
-    <g transform={`translate(${x} ${y}) rotate(${rotate})`}>
-      <path d="M 0 0 Q 8 -4 14 0 Q 8 4 0 0 Z" fill={color} opacity="0.9" />
-    </g>
-  )
-}
-
-// Generic flower renderer per botanical
-function FlowerHead({ kind, palette }) {
+// ---------- Flower head renderers (one per species) ----------
+function FlowerHead({ kind, palette, scale = 1 }) {
+  const s = scale
   switch (kind) {
     case 'snowdrop':
       return (
-        <g>
-          <ellipse cx="0" cy="0" rx="5" ry="8" fill={palette.flower} />
-          <ellipse cx="-3" cy="-2" rx="2" ry="6" fill="#fff" opacity="0.7" />
-          <circle cx="0" cy="6" r="2" fill={palette.accent} />
+        <g transform={`scale(${s})`}>
+          <line x1="0" y1="-2" x2="0" y2="2" stroke={palette.stem} strokeWidth="1" />
+          <path d="M -4 -2 Q -5 4 0 6 Q 5 4 4 -2 Q 2 -1 0 -1 Q -2 -1 -4 -2 Z" fill={palette.flower} stroke={palette.accent} strokeWidth="0.5" />
+          <path d="M -2 0 Q -2 3 0 4 Q 2 3 2 0 Z" fill={palette.accent} opacity="0.5" />
         </g>
       )
     case 'tulip':
       return (
-        <g>
-          <path d="M -6 4 Q -6 -8 0 -10 Q 6 -8 6 4 Z" fill={palette.flower} />
-          <path d="M -3 4 Q -3 -6 0 -8 Q 3 -6 3 4 Z" fill={palette.accent} opacity="0.7" />
+        <g transform={`scale(${s})`}>
+          <path d="M -6 4 Q -7 -10 0 -11 Q 7 -10 6 4 Q 3 -1 0 -1 Q -3 -1 -6 4 Z" fill={palette.flower} />
+          <path d="M -3 4 Q -3 -7 0 -8 Q 3 -7 3 4 Z" fill={palette.accent} opacity="0.7" />
         </g>
       )
     case 'cherry':
       return (
-        <g>
-          {[0, 72, 144, 216, 288].map((a) => (
-            <ellipse key={a} cx="0" cy="-6" rx="3.4" ry="5" fill={palette.flower}
-              transform={`rotate(${a})`} />
+        <g transform={`scale(${s})`}>
+          {[0, 72, 144, 216, 288].map(a => (
+            <g key={a} transform={`rotate(${a})`}>
+              <path d="M 0 -2 Q -3 -7 0 -9 Q 3 -7 0 -2 Z" fill={palette.flower} />
+            </g>
           ))}
           <circle r="2" fill={palette.accent} />
+          {Array.from({length:6}).map((_,i)=>(
+            <line key={i} x1="0" y1="0" x2={Math.cos(i)*1.6} y2={Math.sin(i)*1.6} stroke={palette.accent} strokeWidth="0.4" />
+          ))}
         </g>
       )
     case 'daisy':
       return (
-        <g>
-          {Array.from({length: 8}).map((_, i) => (
-            <ellipse key={i} cx="0" cy="-6" rx="2.4" ry="5" fill={palette.flower}
-              transform={`rotate(${i * 45})`} />
+        <g transform={`scale(${s})`}>
+          {Array.from({length: 10}).map((_, i) => (
+            <ellipse key={i} cx="0" cy="-7" rx="2.2" ry="6" fill={palette.flower}
+              stroke={palette.accent} strokeWidth="0.3" opacity="0.95"
+              transform={`rotate(${i * 36})`} />
           ))}
-          <circle r="2.6" fill={palette.accent} />
+          <circle r="2.8" fill={palette.accent} />
+          <circle r="1.4" fill={palette.stem} opacity="0.4" />
         </g>
       )
     case 'rose':
       return (
-        <g>
-          <circle r="7" fill={palette.flower} />
-          <circle r="5" fill={palette.accent} opacity="0.65" />
-          <circle r="3" fill={palette.flower} />
-          <circle r="1.4" fill={palette.accent} />
+        <g transform={`scale(${s})`}>
+          <circle r="8" fill={palette.flower} />
+          <path d="M -6 0 Q 0 -8 6 0 Q 0 8 -6 0 Z" fill={palette.accent} opacity="0.5" />
+          <circle r="5" fill={palette.flower} opacity="0.9" />
+          <circle r="3" fill={palette.accent} opacity="0.7" />
+          <circle r="1.4" fill={palette.flower} />
         </g>
       )
     case 'sunflower':
       return (
-        <g>
-          {Array.from({length: 12}).map((_, i) => (
-            <ellipse key={i} cx="0" cy="-8" rx="2.6" ry="6" fill={palette.flower}
-              transform={`rotate(${i * 30})`} />
+        <g transform={`scale(${s})`}>
+          {Array.from({length: 14}).map((_, i) => (
+            <ellipse key={i} cx="0" cy="-10" rx="2.6" ry="7" fill={palette.flower}
+              stroke={palette.accent} strokeWidth="0.35"
+              transform={`rotate(${i * (360/14)})`} />
           ))}
-          <circle r="4" fill={palette.accent} />
+          <circle r="5" fill={palette.accent} />
+          <circle r="3.4" fill={palette.stem} opacity="0.45" />
         </g>
       )
     case 'lavender':
       return (
-        <g>
-          {Array.from({length: 6}).map((_, i) => (
-            <circle key={i} cx="0" cy={-i * 4} r={2.4 - i * 0.15} fill={palette.flower} />
-          ))}
+        <g transform={`scale(${s})`}>
+          {Array.from({length: 7}).map((_, i) => {
+            const off = (i % 2 === 0) ? -1.2 : 1.2
+            return (
+              <g key={i} transform={`translate(${off} ${-i * 3.4})`}>
+                <ellipse cx="0" cy="0" rx="1.8" ry="2.4" fill={palette.flower} />
+                <ellipse cx={off*1.5} cy="-0.5" rx="1.3" ry="1.8" fill={palette.accent} opacity="0.85" />
+              </g>
+            )
+          })}
         </g>
       )
     case 'hibiscus':
       return (
-        <g>
-          {[0,72,144,216,288].map(a => (
-            <path key={a} transform={`rotate(${a})`} d="M 0 0 Q 6 -2 8 -8 Q 4 -6 0 0 Z" fill={palette.flower} />
+        <g transform={`scale(${s})`}>
+          {[0, 72, 144, 216, 288].map(a => (
+            <path key={a} transform={`rotate(${a})`}
+              d="M 0 0 Q 5 -3 8 -10 Q 2 -7 0 0 Z" fill={palette.flower} />
           ))}
           <circle r="2" fill={palette.accent} />
-          <line x1="0" y1="0" x2="0" y2="6" stroke={palette.accent} strokeWidth="1" />
+          <line x1="0" y1="0" x2="0" y2="7" stroke={palette.accent} strokeWidth="0.8" />
+          <circle cx="0" cy="8" r="1.2" fill={palette.accent} />
         </g>
       )
-    case 'goldenleaf':
+    case 'goldenwild':
       return (
-        <g>
-          <path d="M 0 -10 Q 7 -2 0 8 Q -7 -2 0 -10 Z" fill={palette.flower} />
-          <line x1="0" y1="-10" x2="0" y2="8" stroke={palette.accent} strokeWidth="0.8" />
-        </g>
-      )
-    case 'autumnvine':
-      return (
-        <g>
-          <path d="M -6 0 Q -3 -7 0 0 Q 3 7 6 0 Q 3 -7 0 0 Q -3 7 -6 0 Z" fill={palette.flower} opacity="0.85" />
-          <circle r="2" fill={palette.accent} />
-        </g>
-      )
-    case 'pine':
-      return (
-        <g>
-          {Array.from({length:7}).map((_,i)=>(
-            <line key={i} x1="0" y1={-i*3} x2={i%2?6:-6} y2={-i*3 - 2}
-              stroke={palette.flower} strokeWidth="1.5" strokeLinecap="round" />
+        <g transform={`scale(${s})`}>
+          {Array.from({length: 8}).map((_, i) => (
+            <ellipse key={i} cx="0" cy="-6" rx="1.8" ry="5" fill={palette.flower}
+              stroke={palette.accent} strokeWidth="0.3"
+              transform={`rotate(${i * 45})`} />
           ))}
+          <circle r="2.2" fill={palette.accent} />
         </g>
       )
-    case 'berries':
+    case 'maple':
       return (
-        <g>
-          <circle cx="-3" cy="-3" r="3" fill={palette.flower} />
-          <circle cx="3" cy="-1" r="3" fill={palette.flower} />
-          <circle cx="0" cy="3" r="3" fill={palette.flower} />
-          <circle cx="-3" cy="-3" r="1" fill="#fff" opacity="0.5" />
+        <g transform={`scale(${s})`}>
+          {/* a stylized maple leaf */}
+          <path
+            d="M 0 -10 L 2 -6 L 5 -7 L 4 -3 L 9 -2 L 5 0 L 7 4 L 2 3 L 1 8 L 0 5 L -1 8 L -2 3 L -7 4 L -5 0 L -9 -2 L -4 -3 L -5 -7 L -2 -6 Z"
+            fill={palette.flower} stroke={palette.accent} strokeWidth="0.4"
+          />
+          <line x1="0" y1="-10" x2="0" y2="8" stroke={palette.stem} strokeWidth="0.6" opacity="0.7" />
+        </g>
+      )
+    case 'pineberry':
+      return (
+        <g transform={`scale(${s})`}>
+          {/* pine sprig with berries cluster */}
+          {Array.from({length: 8}).map((_,i)=>{
+            const y = -10 + i*2.6
+            const len = 7 - i * 0.5
+            return (
+              <g key={i}>
+                <line x1="0" y1={y} x2={-len} y2={y - 1} stroke={palette.leaf} strokeWidth="1.2" strokeLinecap="round" />
+                <line x1="0" y1={y} x2={len}  y2={y - 1} stroke={palette.leaf} strokeWidth="1.2" strokeLinecap="round" />
+              </g>
+            )
+          })}
+          <circle cx="-2" cy="3" r="2" fill={palette.flower} />
+          <circle cx="2"  cy="4" r="2" fill={palette.flower} />
+          <circle cx="0"  cy="6" r="2" fill={palette.flower} />
+          <circle cx="-2" cy="3" r="0.6" fill="#fff" opacity="0.6" />
+        </g>
+      )
+    case 'holly':
+      return (
+        <g transform={`scale(${s})`}>
+          {/* holly leaves with spiky edges */}
+          <path d="M 0 -10 Q 5 -8 7 -4 Q 5 -3 4 -1 Q 6 1 4 3 Q 1 5 0 8 Q -1 5 -4 3 Q -6 1 -4 -1 Q -5 -3 -7 -4 Q -5 -8 0 -10 Z"
+            fill={palette.leaf} stroke={palette.stem} strokeWidth="0.4" />
+          <path d="M -1 -7 Q 0 -2 1 -7" stroke={palette.stem} strokeWidth="0.4" fill="none" opacity="0.5" />
+          <circle cx="-1.5" cy="2" r="1.6" fill={palette.flower} />
+          <circle cx="1.5"  cy="3" r="1.6" fill={palette.flower} />
+          <circle cx="0"    cy="5" r="1.6" fill={palette.flower} />
+          <circle cx="-1.5" cy="2" r="0.5" fill="#fff" opacity="0.5" />
         </g>
       )
     default:
@@ -137,54 +161,133 @@ function FlowerHead({ kind, palette }) {
   }
 }
 
-const PALETTES = {
-  snowdrop:   { stem:'#6b8a5a', flower:'#f3f5ef', accent:'#cdd6a8' },
-  tulip:      { stem:'#6b8a5a', flower:'#e07a6b', accent:'#f2c46a' },
-  cherry:     { stem:'#7a5a4a', flower:'#f3c8d0', accent:'#c97a8c' },
-  daisy:      { stem:'#7a8f6a', flower:'#fbfaf3', accent:'#E3C66A' },
-  rose:       { stem:'#6b8a5a', flower:'#c8556a', accent:'#f0c5c9' },
-  sunflower:  { stem:'#6b8a5a', flower:'#E3C66A', accent:'#9A744A' },
-  lavender:   { stem:'#6b8a5a', flower:'#a98bc4', accent:'#cdbedf' },
-  hibiscus:   { stem:'#6b8a5a', flower:'#d65a6b', accent:'#f5e07b' },
-  goldenleaf: { stem:'#9A744A', flower:'#d8a04a', accent:'#9A744A' },
-  autumnvine: { stem:'#9A744A', flower:'#c4663a', accent:'#7b3a1a' },
-  pine:       { stem:'#4a5e3f', flower:'#5E7253', accent:'#9A744A' },
-  berries:    { stem:'#4a5e3f', flower:'#b23a4a', accent:'#5E7253' },
+// One realistic curved leaf
+function Leaf({ x, y, rotate = 0, color = '#7a8f6a', size = 1, flipped = false }) {
+  return (
+    <g transform={`translate(${x} ${y}) rotate(${rotate}) scale(${flipped ? -size : size} ${size})`}>
+      <path d="M 0 0 Q 5 -4 12 -2 Q 8 1 0 0 Z" fill={color} opacity="0.95" />
+      <path d="M 0 0 Q 6 -2 11 -2" stroke={color} strokeWidth="0.4" fill="none" opacity="0.5" />
+    </g>
+  )
 }
 
-export default function Botanical({ kind = 'daisy', count = 0, month = 'June', monthName, themeMode }) {
-  // count caps at 31. Each "plant" has a stem + flower head. We draw up to count stems.
-  const max = 31
-  const N = Math.min(count, max)
+// A curved stem path
+function StemPath({ baseX, baseY, length, sway, color, width = 1.6 }) {
+  const cx = baseX + Math.sin(sway) * 14
+  const topX = baseX + sway * 8
+  const topY = baseY - length
+  return (
+    <path
+      d={`M ${baseX} ${baseY} Q ${cx} ${baseY - length / 2}, ${topX} ${topY}`}
+      stroke={color} strokeWidth={width} fill="none" strokeLinecap="round"
+    />
+  )
+}
+
+// ---------- A full Bloom (stem + leaves + flower) ----------
+function Bloom({ i, kind, palette, baseX, baseY, length, sway, scale, layer = 'front' }) {
+  const topX = baseX + sway * 8
+  const topY = baseY - length
+
+  // Two optional leaves at different heights along the stem
+  const showLeafA = prand(i, 17) > 0.15
+  const showLeafB = prand(i, 18) > 0.55
+  const leafAY = baseY - length * (0.32 + prand(i, 19) * 0.18)
+  const leafBY = baseY - length * (0.6 + prand(i, 20) * 0.2)
+  const leafAFlipped = prand(i, 21) > 0.5
+  const leafBFlipped = !leafAFlipped
+  const leafColor = palette.leaf || palette.stem
+
+  // approximate stem x at given y (linear interp toward topX)
+  const xAt = (y) => {
+    const t = (baseY - y) / length
+    return baseX + (topX - baseX) * t + Math.sin(t * Math.PI) * sway * 4
+  }
+
+  const stemWidth = layer === 'back' ? 1.1 : 1.6
+  const stemColor = layer === 'back' ? palette.stem : palette.stem
+
+  return (
+    <>
+      {/* stem */}
+      <motion.g
+        initial={{ opacity: 0, scaleY: 0.3 }}
+        animate={{ opacity: layer === 'back' ? 0.6 : 1, scaleY: 1 }}
+        style={{ transformOrigin: `${baseX}px ${baseY}px` }}
+        transition={{ duration: 0.9, delay: i * 0.03, ease: 'easeOut' }}
+      >
+        <StemPath baseX={baseX} baseY={baseY} length={length} sway={sway} color={stemColor} width={stemWidth} />
+        {showLeafA && (
+          <Leaf
+            x={xAt(leafAY)} y={leafAY}
+            rotate={(leafAFlipped ? -20 : 20) + (prand(i, 22) - 0.5) * 14}
+            color={leafColor} size={0.85 + prand(i, 23) * 0.35}
+            flipped={leafAFlipped}
+          />
+        )}
+        {showLeafB && (
+          <Leaf
+            x={xAt(leafBY)} y={leafBY}
+            rotate={(leafBFlipped ? -25 : 25) + (prand(i, 24) - 0.5) * 14}
+            color={leafColor} size={0.7 + prand(i, 25) * 0.35}
+            flipped={leafBFlipped}
+          />
+        )}
+      </motion.g>
+
+      {/* flower head - static <g> handles position via attribute, motion.g handles scale/opacity */}
+      <g transform={`translate(${topX} ${topY})`}>
+        <motion.g
+          initial={{ opacity: 0, scale: 0 }}
+          animate={{ opacity: layer === 'back' ? 0.85 : 1, scale: 1 }}
+          transition={{ duration: 0.55, delay: 0.35 + i * 0.03, ease: [0.34, 1.56, 0.64, 1] }}
+          style={{ transformOrigin: '0px 0px' }}
+        >
+          <g transform={`rotate(${(prand(i, 26) - 0.5) * 14})`}>
+            <FlowerHead kind={kind} palette={palette} scale={scale} />
+          </g>
+        </motion.g>
+      </g>
+    </>
+  )
+}
+
+export default function Botanical({ kind = 'daisy', count = 0 }) {
+  const N = Math.min(count, 31)
   const palette = PALETTES[kind] || PALETTES.daisy
 
-  // Generate stable stem positions across a wide base
-  const stems = []
+  // Distribute blooms across the ground naturally with slight overlap.
+  // We use a wider X range and let positions overlap. Density grows with N.
+  const blooms = []
   for (let i = 0; i < N; i++) {
-    const t = i / Math.max(N - 1, 1)
-    const baseX = 30 + prand(i, 1) * 200 // 30..230
-    const baseY = 340 + prand(i, 2) * 8
-    const length = 70 + prand(i, 3) * 110
-    const sway = (prand(i, 4) - 0.5) * 1.8
-    const headX = baseX + sway * 6
-    const headY = baseY - length
-    stems.push({ baseX, baseY, length, sway, headX, headY, i })
+    // place across 0..260 with small horizontal jitter
+    const slot = (i / Math.max(N - 1, 1))
+    const baseX = 18 + slot * 220 + (prand(i, 1) - 0.5) * 28   // allow overlap
+    const baseY = 342 + (prand(i, 2) - 0.5) * 10
+    const length = 60 + prand(i, 3) * 130                       // strong height variation
+    const sway = (prand(i, 4) - 0.5) * 2.4
+    const scale = 0.78 + prand(i, 5) * 0.55                     // size variation
+    const layer = prand(i, 6) > 0.78 ? 'back' : 'front'
+    blooms.push({ i, baseX, baseY, length, sway, scale, layer })
   }
+  // draw back layer first so front blooms overlap them
+  blooms.sort((a, b) => (a.layer === 'back' ? -1 : 1))
 
   return (
     <div className="relative w-full h-full flex flex-col">
       <svg viewBox="0 0 260 380" className="w-full h-full" preserveAspectRatio="xMidYMax meet">
         {/* soft ground line */}
         <path d="M 10 348 Q 130 354 250 346" stroke="hsl(var(--daisy-ink) / 0.18)" strokeWidth="1" fill="none" />
-        {/* tiny grass tufts */}
-        {Array.from({length: 18}).map((_, i) => {
-          const x = 15 + i * 13 + (prand(i, 9) - 0.5) * 6
+
+        {/* grass tufts */}
+        {Array.from({length: 22}).map((_, i) => {
+          const x = 10 + i * 11 + (prand(i, 9) - 0.5) * 8
           return <line key={i} x1={x} y1="348" x2={x + (prand(i,10)-0.5)*2} y2={348 - 3 - prand(i,11)*5}
             stroke="hsl(var(--daisy-ink) / 0.25)" strokeWidth="0.8" strokeLinecap="round" />
         })}
 
         {/* baseline subtle foliage so the garden never feels empty */}
-        <g opacity="0.35">
+        <g opacity="0.32">
           {Array.from({length: 5}).map((_, i) => {
             const x = 40 + i * 45 + (prand(i, 21) - 0.5) * 18
             const h = 22 + prand(i, 22) * 14
@@ -198,33 +301,9 @@ export default function Botanical({ kind = 'daisy', count = 0, month = 'June', m
           })}
         </g>
 
-        {/* stems */}
-        {stems.map((s) => (
-          <motion.g key={`stem-${s.i}`}
-            initial={{ opacity: 0, scaleY: 0.4 }}
-            animate={{ opacity: 1, scaleY: 1 }}
-            style={{ transformOrigin: `${s.baseX}px ${s.baseY}px` }}
-            transition={{ duration: 0.9, delay: s.i * 0.04, ease: 'easeOut' }}
-          >
-            <Stem x={s.baseX} y={s.baseY} length={s.length} sway={s.sway} color={palette.stem} />
-            {/* maybe a leaf */}
-            {prand(s.i, 5) > 0.5 && (
-              <Leaf x={s.baseX + s.sway * 3} y={s.baseY - s.length * 0.55}
-                rotate={prand(s.i, 6) > 0.5 ? 25 : -25} color={palette.stem} />
-            )}
-          </motion.g>
-        ))}
-
-        {/* flower heads */}
-        {stems.map((s) => (
-          <motion.g key={`head-${s.i}`}
-            transform={`translate(${s.headX} ${s.headY})`}
-            initial={{ opacity: 0, scale: 0 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.5, delay: 0.4 + s.i * 0.04, ease: 'backOut' }}
-          >
-            <FlowerHead kind={kind} palette={palette} />
-          </motion.g>
+        {/* blooms */}
+        {blooms.map((b) => (
+          <Bloom key={`b-${b.i}-${kind}`} {...b} kind={kind} palette={palette} />
         ))}
       </svg>
     </div>

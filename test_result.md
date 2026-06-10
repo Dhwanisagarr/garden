@@ -139,6 +139,18 @@ frontend:
         agent: "main"
         comment: "Manually verified via Playwright screenshots: empty state, hover hint, double-click upload, multiple memories displayed, sidebar botanical visibly grows (sunflowers for June), toast confirmation, floating petals on month transition, dark theme cozy forest palette, navigation to July updates botanical to Lavender. Layout fits single viewport without scrolling at 1920x1000."
 
+  - task: "Botanical growth + seasonal identity + completion celebration + search (update)"
+    implemented: true
+    working: true
+    file: "app/page.js, components/Botanical.jsx, components/Particles.jsx, lib/botanicals.js, lib/daisy-db.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "main"
+        comment: "Rewrote bloom renderer so each memory = stem + leaves + full flower head, with natural variation (height, sway, scale, layered back/front). Renamed Sept-Dec to new identities (Golden Wildflowers, Maple Sprigs, Pine+Berries, Holly+Berries). Added month-themed ParticleSVG (snowflakes, tulip petals, maple leaves, holly, etc.) used both for upload petals and celebration drift. Added full-month completion detection (persisted per-month in localStorage) that triggers butterflies in light theme / fireflies in dark theme + drifting petals + subtle handwritten message 'Your June garden has fully bloomed.' Added minimal search field in top-right supporting month names, years, exact dates, day numbers; selecting a result navigates to the month and briefly highlights the matching tile with a butter+clay ring. Verified all states via Playwright: 15-bloom lush sidebar, 30-bloom completed celebration with butterflies + message, July->Lavender botanical, search dropdown + jump."
+
 metadata:
   created_by: "main_agent"
   version: "1.0"

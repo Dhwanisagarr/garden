@@ -2,14 +2,15 @@
 
 import { useEffect, useMemo, useRef, useState, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ChevronLeft, ChevronRight, X, Trash2, RefreshCw, ImagePlus } from 'lucide-react'
+import { ChevronLeft, ChevronRight, X, Trash2, RefreshCw, ImagePlus, Search } from 'lucide-react'
 import { toast } from 'sonner'
 
 import DaisyToggle from '@/components/DaisyToggle'
 import Botanical from '@/components/Botanical'
 import SVGDefs from '@/components/SVGDefs'
+import { ParticleSVG, Butterfly, Firefly } from '@/components/Particles'
 import { botanicalForMonth } from '@/lib/botanicals'
-import { dateKey, putImage, deleteImage, getMonthImages } from '@/lib/daisy-db'
+import { dateKey, putImage, deleteImage, getMonthImages, listAllMemoryKeys } from '@/lib/daisy-db'
 
 const MONTH_NAMES = [
   'January','February','March','April','May','June',
@@ -35,6 +36,11 @@ function App() {
   const [preview, setPreview] = useState(null) // dateKey
   const [petals, setPetals] = useState([])     // ephemeral floating petals
   const [hoveredDay, setHoveredDay] = useState(null)
+  const [highlightDay, setHighlightDay] = useState(null)
+  const [celebration, setCelebration] = useState(null) // { kind, message } or null
+  const [searchOpen, setSearchOpen] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [searchResults, setSearchResults] = useState([])
   const fileInputRef = useRef(null)
   const pendingDayRef = useRef(null)
 
@@ -71,9 +77,12 @@ function App() {
   const goPrev = () => { setDirection(-1); setMonth(m => { if (m === 1) { setYear(y=>y-1); return 12 } return m-1 }) ; emitPetals() }
   const goNext = () => { setDirection(+1); setMonth(m => { if (m === 12){ setYear(y=>y+1); return 1 } return m+1 }) ; emitPetals() }
 
-  function emitPetals() {
-    const batch = Array.from({ length: 6 }).map((_, i) => ({
+  function emitPetals(opts = {}) {
+    const kind = opts.kind // explicit kind wins; otherwise petal renders with month botanical at draw time
+    const count = opts.count || 6
+    const batch = Array.from({ length: count }).map((_, i) => ({
       id: Math.random().toString(36).slice(2),
+      kind,
       left: 8 + Math.random() * 84,
       top: 6 + Math.random() * 24,
       dx: (Math.random() - 0.5) * 80,
@@ -104,9 +113,27 @@ function App() {
     const key = dateKey(year, month, day)
     try {
       await putImage(key, dataUrl)
-      setImages(prev => ({ ...prev, [key]: dataUrl }))
+      const next = { ...images, [key]: dataUrl }
+      setImages(next)
       toast.success('Memory added', { description: `${MONTH_NAMES[month-1]} ${day}` })
-      emitPetals()
+      emitPetals({ kind: botanical.key, count: 8 })
+
+      // ----- Full month completion celebration (once per month) -----
+      const dim = daysInMonth(year, month)
+      const filledNow = Object.keys(next).length
+      const celebKey = `daisy-celebrated-${year}-${String(month).padStart(2,'0')}`
+      if (filledNow === dim && typeof window !== 'undefined' && !localStorage.getItem(celebKey)) {
+        localStorage.setItem(celebKey, '1')
+        const messages = [
+          `Your ${MONTH_NAMES[month-1]} garden has fully bloomed.`,
+          'Every day found its place.',
+        ]
+        const msg = messages[Math.floor(Math.random() * messages.length)]
+        setCelebration({ kind: botanical.key, message: msg })
+        // gentle additional petal drift
+        emitPetals({ kind: botanical.key, count: 18 })
+        setTimeout(() => setCelebration(null), 5500)
+      }
     } catch (err) {
       console.error(err)
       toast.error('Could not save image')
@@ -149,13 +176,31 @@ function App() {
     return () => window.removeEventListener('touchstart', setTouch)
   }, [])
 
+  // Search index: when query changes, scan IndexedDB keys + current month days
+  useEffect(() => {
+    let cancelled = false
+    const q = searchQuery.trim().toLowerCase()
+    if (!q) { setSearchResults([]); return }
+    ;(async () => {
+      try {
+        const all = await listAllMemoryKeys()
+        const parsed = parseSearchQuery(q, year, month)
+        const results = filterByQuery(all, q, parsed, year, month, today)
+        if (!cancelled) setSearchResults(results.slice(0, 8))
+      } catch (e) {
+        if (!cancelled) setSearchResults([])
+      }
+    })()
+    return () => { cancelled = true }
+  }, [searchQuery, year, month])
+
   if (!mounted) return null
 
   return (
     <div className="h-screen w-screen overflow-hidden bg-background text-foreground relative">
       <SVGDefs />
 
-      {/* Floating petals overlay */}
+      {/* Floating petals overlay - themed to current month botanical */}
       <div className="pointer-events-none absolute inset-0 z-40">
         <AnimatePresence>
           {petals.map(p => (
@@ -168,9 +213,7 @@ function App() {
                 animationDelay: `${p.delay}s`
               }}
             >
-              <svg width="14" height="14" viewBox="0 0 14 14">
-                <ellipse cx="7" cy="7" rx="3" ry="6" fill={isDark ? '#D8D0C4' : '#E3C66A'} opacity="0.85" />
-              </svg>
+              <ParticleSVG kind={p.kind || botanical.key} isDark={isDark} />
             </span>
           ))}
         </AnimatePresence>
@@ -255,12 +298,32 @@ function App() {
               </button>
             </div>
 
-            <button
-              onClick={() => { const t = new Date(); setYear(t.getFullYear()); setMonth(t.getMonth()+1); emitPetals() }}
-              className="text-xs uppercase tracking-[0.22em] text-muted-foreground hover:text-foreground transition-colors font-sans-clean"
-            >
-              Today
-            </button>
+            <div className="flex items-center gap-3">
+              <SearchField
+                isDark={isDark}
+                value={searchQuery}
+                onChange={setSearchQuery}
+                results={searchResults}
+                open={searchOpen}
+                onOpenChange={setSearchOpen}
+                onPickResult={(r) => {
+                  setDirection(r.year > year || (r.year === year && r.month > month) ? +1 : -1)
+                  setYear(r.year); setMonth(r.month)
+                  setSearchOpen(false); setSearchQuery('')
+                  if (r.day) {
+                    setHighlightDay(r.day)
+                    setTimeout(() => setHighlightDay(null), 2400)
+                  }
+                  emitPetals({ kind: botanicalForMonth(r.month).key, count: 4 })
+                }}
+              />
+              <button
+                onClick={() => { const t = new Date(); setYear(t.getFullYear()); setMonth(t.getMonth()+1); emitPetals() }}
+                className="text-xs uppercase tracking-[0.22em] text-muted-foreground hover:text-foreground transition-colors font-sans-clean"
+              >
+                Today
+              </button>
+            </div>
           </div>
 
           {/* Weekday strip */}
@@ -309,6 +372,7 @@ function App() {
                       isTouchRef={isTouchRef}
                       hovered={hoveredDay === cell.day}
                       onHover={(h) => setHoveredDay(h ? cell.day : null)}
+                      highlighted={highlightDay === cell.day}
                     />
                   )
                 })}
@@ -317,6 +381,9 @@ function App() {
           </div>
         </main>
       </div>
+
+      {/* Celebration overlay (full month bloomed) */}
+      <CelebrationOverlay celebration={celebration} isDark={isDark} />
 
       {/* Full-screen preview */}
       <AnimatePresence>
@@ -364,7 +431,7 @@ function App() {
 }
 
 // ---------- DayTile component ----------
-function DayTile({ day, dKey, img, isToday, onActivate, onPreview, onDelete, onReplace, isTouchRef, hovered, onHover }) {
+function DayTile({ day, dKey, img, isToday, onActivate, onPreview, onDelete, onReplace, isTouchRef, hovered, onHover, highlighted }) {
   const clickTimer = useRef(null)
 
   const handleClick = (e) => {
@@ -391,9 +458,20 @@ function DayTile({ day, dKey, img, isToday, onActivate, onPreview, onDelete, onR
       onClick={handleClick}
       onDoubleClick={handleDoubleClick}
       whileHover={{ y: -2 }}
-      transition={{ type: 'spring', stiffness: 280, damping: 22 }}
+      animate={highlighted ? { scale: [1, 1.06, 1] } : { scale: 1 }}
+      transition={{ type: 'spring', stiffness: 280, damping: 22, duration: highlighted ? 1.2 : undefined }}
       className="relative paper-tile hand-drawn-border rounded-lg overflow-hidden cursor-pointer group min-h-0 w-full h-full"
     >
+      {highlighted && (
+        <motion.div
+          aria-hidden
+          initial={{ opacity: 0 }}
+          animate={{ opacity: [0, 1, 0.6, 1, 0] }}
+          transition={{ duration: 2.2 }}
+          className="pointer-events-none absolute inset-0 z-20 rounded-lg ring-2 ring-offset-0"
+          style={{ boxShadow: '0 0 0 3px hsl(var(--daisy-clay) / 0.55), 0 0 28px 6px hsl(var(--daisy-butter) / 0.55)' }}
+        />
+      )}
       {/* Date number */}
       <div className={`absolute top-1.5 left-2 z-10 font-serif-display text-[13px] leading-none ${
         isToday ? 'text-[hsl(var(--daisy-clay))] font-semibold' : 'text-[hsl(var(--daisy-ink))]/70'
@@ -479,6 +557,247 @@ async function fileToScaledDataURL(file, maxDim = 1400) {
     reader.onerror = reject
     reader.readAsDataURL(file)
   })
+}
+
+// ---------------- Search helpers ----------------
+function parseSearchQuery(qRaw, currYear, currMonth) {
+  const q = qRaw.trim().toLowerCase()
+  if (!q) return null
+  const out = { monthMatches: [], yearMatches: [], exactDate: null, dayInCurrent: null }
+
+  // exact date yyyy-mm-dd or yyyy/mm/dd or m/d or m/d/yyyy
+  const iso = q.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})$/)
+  if (iso) {
+    out.exactDate = { year: +iso[1], month: +iso[2], day: +iso[3] }
+  }
+  const md = q.match(/^(\d{1,2})[\/\-](\d{1,2})(?:[\/\-](\d{2,4}))?$/)
+  if (md && !iso) {
+    let y = md[3] ? +md[3] : currYear
+    if (y < 100) y = 2000 + y
+    out.exactDate = { year: y, month: +md[1], day: +md[2] }
+  }
+
+  // year only
+  const yOnly = q.match(/^(19|20)\d{2}$/)
+  if (yOnly) out.yearMatches.push(+q)
+
+  // month names (full or 3-letter)
+  for (let m = 1; m <= 12; m++) {
+    const full = MONTH_NAMES[m-1].toLowerCase()
+    if (full.startsWith(q) || q.startsWith(full.slice(0, 3))) {
+      out.monthMatches.push(m)
+    }
+  }
+
+  // "june 2025" type
+  const mYear = q.match(/^([a-z]+)\s+(\d{4})$/)
+  if (mYear) {
+    const mIdx = MONTH_NAMES.findIndex(n => n.toLowerCase().startsWith(mYear[1]))
+    if (mIdx >= 0) {
+      out.exactDate = null
+      out.monthMatches = [mIdx + 1]
+      out.yearMatches = [+mYear[2]]
+    }
+  }
+
+  // pure day number 1..31 -> day in current month
+  if (/^\d{1,2}$/.test(q)) {
+    const n = +q
+    if (n >= 1 && n <= 31) out.dayInCurrent = n
+  }
+
+  return out
+}
+
+function filterByQuery(allKeys, qRaw, parsed, currYear, currMonth, today) {
+  if (!parsed) return []
+  const results = []
+  const push = (r) => {
+    if (!results.find(x => x.year === r.year && x.month === r.month && x.day === r.day)) results.push(r)
+  }
+
+  // exact date
+  if (parsed.exactDate) {
+    push({ ...parsed.exactDate, label: `${MONTH_NAMES[parsed.exactDate.month-1]} ${parsed.exactDate.day}, ${parsed.exactDate.year}`, sub: 'Exact date', kind: 'date' })
+  }
+
+  // day in current month
+  if (parsed.dayInCurrent) {
+    push({ year: currYear, month: currMonth, day: parsed.dayInCurrent, label: `${MONTH_NAMES[currMonth-1]} ${parsed.dayInCurrent}, ${currYear}`, sub: 'This month', kind: 'day' })
+  }
+
+  // memories matching month/year filters
+  const monthOk = parsed.monthMatches.length === 0 ? null : new Set(parsed.monthMatches)
+  const yearOk  = parsed.yearMatches.length === 0  ? null : new Set(parsed.yearMatches)
+
+  // From existing memories
+  for (const k of allKeys) {
+    const m = String(k).match(/^(\d{4})-(\d{2})-(\d{2})$/)
+    if (!m) continue
+    const y = +m[1], mo = +m[2], d = +m[3]
+    if (monthOk && !monthOk.has(mo)) continue
+    if (yearOk && !yearOk.has(y)) continue
+    push({ year: y, month: mo, day: d, label: `${MONTH_NAMES[mo-1]} ${d}, ${y}`, sub: 'Memory', kind: 'memory' })
+  }
+
+  // If only a month or only a year was given (no memories matched), still suggest navigating
+  if (results.length === 0) {
+    if (parsed.monthMatches.length && parsed.yearMatches.length) {
+      for (const mo of parsed.monthMatches) for (const y of parsed.yearMatches)
+        push({ year: y, month: mo, day: null, label: `${MONTH_NAMES[mo-1]} ${y}`, sub: 'Open month', kind: 'month' })
+    } else if (parsed.monthMatches.length) {
+      for (const mo of parsed.monthMatches)
+        push({ year: currYear, month: mo, day: null, label: `${MONTH_NAMES[mo-1]} ${currYear}`, sub: 'Open month', kind: 'month' })
+    } else if (parsed.yearMatches.length) {
+      for (const y of parsed.yearMatches)
+        push({ year: y, month: 1, day: null, label: `January ${y}`, sub: 'Open year', kind: 'year' })
+    }
+  }
+
+  return results
+}
+
+// ---------------- Search field ----------------
+function SearchField({ value, onChange, results, open, onOpenChange, onPickResult, isDark }) {
+  const wrapperRef = useRef(null)
+  const inputRef = useRef(null)
+
+  useEffect(() => {
+    function onDoc(e) {
+      if (!wrapperRef.current) return
+      if (!wrapperRef.current.contains(e.target)) onOpenChange(false)
+    }
+    if (open) document.addEventListener('mousedown', onDoc)
+    return () => document.removeEventListener('mousedown', onDoc)
+  }, [open, onOpenChange])
+
+  return (
+    <div ref={wrapperRef} className="relative">
+      <div className="flex items-center gap-2 px-3 h-9 rounded-full bg-card/70 border border-border/70 hover:border-border focus-within:border-[hsl(var(--daisy-clay))] transition-colors min-w-[230px]">
+        <Search className="w-4 h-4 text-muted-foreground" strokeWidth={1.5} />
+        <input
+          ref={inputRef}
+          type="text"
+          value={value}
+          onChange={(e) => { onChange(e.target.value); onOpenChange(true) }}
+          onFocus={() => onOpenChange(true)}
+          placeholder="Find a memory..."
+          className="w-full bg-transparent outline-none text-sm font-serif-display italic placeholder:text-muted-foreground/70 placeholder:italic text-foreground"
+        />
+        {value && (
+          <button onClick={() => { onChange(''); inputRef.current?.focus() }}
+            className="text-muted-foreground hover:text-foreground" aria-label="Clear">
+            <X className="w-3.5 h-3.5" />
+          </button>
+        )}
+      </div>
+
+      <AnimatePresence>
+        {open && value && (
+          <motion.div
+            initial={{ opacity: 0, y: -4 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -4 }}
+            transition={{ duration: 0.18 }}
+            className="absolute right-0 mt-2 w-[300px] rounded-xl bg-popover border border-border shadow-lg overflow-hidden z-50"
+          >
+            {results.length === 0 ? (
+              <div className="px-4 py-5 text-sm text-muted-foreground italic font-serif-display">
+                Nothing in the garden by that name.
+              </div>
+            ) : (
+              <ul className="py-1 max-h-[60vh] overflow-auto">
+                {results.map((r, i) => (
+                  <li key={`${r.year}-${r.month}-${r.day}-${i}`}>
+                    <button
+                      onClick={() => onPickResult(r)}
+                      className="w-full text-left px-4 py-2.5 hover:bg-muted/70 transition-colors flex items-baseline justify-between gap-3"
+                    >
+                      <span className="font-serif-display text-sm text-foreground">{r.label}</span>
+                      <span className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground/80 font-sans-clean">{r.sub}</span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  )
+}
+
+// ---------------- Celebration overlay ----------------
+function CelebrationOverlay({ celebration, isDark }) {
+  if (!celebration) return null
+  const N = 14
+  return (
+    <div className="pointer-events-none fixed inset-0 z-50 overflow-hidden">
+      {/* creatures */}
+      {Array.from({ length: N }).map((_, i) => {
+        const startX = 10 + Math.random() * 80
+        const startY = 20 + Math.random() * 50
+        const dx = (Math.random() - 0.5) * 220
+        const dy = (Math.random() - 0.3) * 160
+        const delay = Math.random() * 1.2
+        const duration = 3 + Math.random() * 1.5
+        return (
+          <motion.div
+            key={i}
+            initial={{ opacity: 0, x: 0, y: 0, scale: 0.7 }}
+            animate={{
+              opacity: [0, 0.9, 0.9, 0],
+              x: [0, dx, dx * 0.6, dx * 1.2],
+              y: [0, dy * 0.4, dy, dy * 1.2],
+              scale: [0.7, 1, 1, 0.85],
+            }}
+            transition={{ delay, duration, ease: 'easeInOut', times: [0, 0.2, 0.7, 1] }}
+            className="absolute"
+            style={{ left: `${startX}%`, top: `${startY}%` }}
+          >
+            {isDark ? <Firefly /> : <Butterfly color="#9A744A" />}
+          </motion.div>
+        )
+      })}
+
+      {/* gentle drifting petals/leaves */}
+      {Array.from({ length: 18 }).map((_, i) => {
+        const startX = Math.random() * 100
+        const startY = -5 - Math.random() * 12
+        const dx = (Math.random() - 0.5) * 80
+        const dy = 80 + Math.random() * 40
+        const delay = Math.random() * 1.5
+        const duration = 4 + Math.random() * 1.5
+        const rot = (Math.random() - 0.5) * 360
+        return (
+          <motion.div
+            key={`p-${i}`}
+            initial={{ opacity: 0, x: 0, y: 0, rotate: 0 }}
+            animate={{ opacity: [0, 0.9, 0.9, 0], x: dx, y: `${dy}vh`, rotate: rot }}
+            transition={{ delay, duration, ease: 'easeIn' }}
+            className="absolute"
+            style={{ left: `${startX}%`, top: `${startY}%` }}
+          >
+            <ParticleSVG kind={celebration.kind} isDark={isDark} />
+          </motion.div>
+        )
+      })}
+
+      {/* subtle message */}
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: [0, 1, 1, 0], y: 0 }}
+        transition={{ duration: 5.2, times: [0, 0.15, 0.8, 1] }}
+        className="absolute inset-x-0 top-[26%] flex justify-center"
+      >
+        <div className="px-7 py-3 rounded-full bg-card/90 backdrop-blur border border-border shadow-sm">
+          <span className="font-handwritten text-2xl text-[hsl(var(--daisy-clay))]">
+            {celebration.message}
+          </span>
+        </div>
+      </motion.div>
+    </div>
+  )
 }
 
 export default App
