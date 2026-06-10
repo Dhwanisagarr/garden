@@ -163,6 +163,18 @@ frontend:
         agent: "main"
         comment: "Added bottom-right botanical leaf-arrow icon with tooltip 'Preserve this month' (disabled state 'Add memories to preserve this month.' with reduced opacity). Click opens a small handcrafted popover with 'as a PDF page (A4)' / 'as a PNG keepsake (HiRes)'. Built an offscreen ExportSheet (A4 portrait 794x1123) composing the DAISY logo, month+year title, full calendar with memory thumbnails, Botanical illustration, quote 'Ordinary days, gently kept.', and a conditional 'Your <Month> garden fully bloomed.' note when all days are filled. Uses html2canvas-pro@1.5.7 for rasterization at scale=3 (~288 DPI) and jsPDF@2.5.2 for A4 PDF generation. Verified via Playwright: PNG download named DAISY_June_2026.png at 2382x3369 px, PDF download named DAISY_June_2026.pdf at 303 KB; vision analysis confirms the printed layout includes logo, title, calendar with memory tiles, sunflower botanical, and quote. Disabled state verified when no memories present. No existing layouts, typography, colors, themes, search, or upload UX were modified."
 
+  - task: "DHWANI rename + navigation fix + theme-aware exports + high-res quality"
+    implemented: true
+    working: true
+    file: "app/layout.js, app/page.js, app/globals.css, components/ExportSheet.jsx, lib/export.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "main"
+        comment: "(1) Renamed all user-visible DAISY references to DHWANI: browser title, metadata description, sidebar logo, export sheet logo/footer, export filenames (DHWANI_June_2026.pdf/png). IndexedDB name 'daisy-memories' and localStorage keys 'daisy-theme'/'daisy-celebrated-*' intentionally preserved to keep existing user memories attached to their original dates (memory integrity). CSS variable names left internal. (2) Fixed year-skipping navigation: root cause was setYear called inside the setMonth updater, which React 18 StrictMode double-invokes (Dec->Jan ran setYear twice -> +2 years). Replaced with atomic native Date arithmetic: new Date(year, (month-1)+delta, 1) then setYear/setMonth with literal values. Verified via Playwright 30 forward + 35 backward steps: every month appears exactly once, every Dec<->Jan transitions cleanly, no year skipped. Leap years correct: Feb 2024=29, Feb 2025=28, Feb 2028=29 tiles. (3) Theme-aware exports: ExportSheet now accepts isDark prop and uses dual LIGHT/DARK palettes (bg, paper, ink, clay, border etc). The active theme is passed from page.js handlers so the exported PNG/PDF is a faithful snapshot of what the user is viewing. Confirmed via pixel sampling: dark export bg (50,50)=(31,37,30)~#1F251E, light export bg=(247,243,234)~#F7F3EA. (4) Higher resolution: scale=3.5 (~336 DPI) yields 2779x3930 px; PDFs embed lossless PNG instead of JPEG so typography and SVG botanicals stay crisp. (5) Emoji rendering: added Noto Color Emoji via Google Fonts and added 'Apple Color Emoji','Segoe UI Emoji','Noto Color Emoji' to body and export font-family stacks for consistent emoji rendering across OSes. (6) Preserved untouched: botanical growth, seasonal flowers, search, upload, theme toggle, typography, animations, completion celebration, export icon placement."
+
 metadata:
   created_by: "main_agent"
   version: "1.0"

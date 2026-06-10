@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,400&family=Caveat:wght@500;600&family=Inter:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,400&family=Caveat:wght@500;600&family=Inter:wght@400;500&family=Noto+Color+Emoji&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -76,7 +76,7 @@
   }
   html, body {
     @apply bg-background text-foreground;
-    font-family: 'Fraunces', Georgia, serif;
+    font-family: 'Fraunces', Georgia, serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji';
     font-feature-settings: 'ss01', 'ss02';
     overscroll-behavior: none;
   }

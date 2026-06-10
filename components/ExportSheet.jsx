@@ -16,22 +16,58 @@ function firstWeekday(year, month1) {
   return new Date(year, month1 - 1, 1).getDay()
 }
 
+const LIGHT_PALETTE = {
+  bg:         '#F7F3EA',
+  paper:      '#FBF8EE',
+  ink:        '#4F4A44',
+  inkSoft:    'rgba(79, 74, 68, 0.55)',
+  inkFaint:   'rgba(79, 74, 68, 0.22)',
+  border:     'rgba(79, 74, 68, 0.22)',
+  clay:       '#9A744A',
+  butter:     '#E3C66A',
+  sage:       '#C6D3B2',
+  emptyDot:   'rgba(79, 74, 68, 0.15)',
+  daisyPetal: '#FBFAF3',
+  daisyCenter:'#E3C66A',
+  daisyEdge:  '#9A744A',
+  textureA:   'rgba(79,74,68,0.045)',
+  textureB:   'rgba(79,74,68,0.028)',
+}
+
+const DARK_PALETTE = {
+  bg:         '#1F251E',
+  paper:      '#2D382B',
+  ink:        '#EAE4DA',
+  inkSoft:    'rgba(234, 228, 218, 0.62)',
+  inkFaint:   'rgba(234, 228, 218, 0.18)',
+  border:     'rgba(234, 228, 218, 0.20)',
+  clay:       '#D8D0C4',
+  butter:     '#D8D0C4',
+  sage:       '#5E7253',
+  emptyDot:   'rgba(234, 228, 218, 0.18)',
+  daisyPetal: '#D8D0C4',
+  daisyCenter:'#1F251E',
+  daisyEdge:  '#5E7253',
+  textureA:   'rgba(234,228,218,0.04)',
+  textureB:   'rgba(234,228,218,0.025)',
+}
+
 /**
  * Beautiful printable composition. Rendered offscreen at exactly
  * A4 portrait base size (794 x 1123 px at 96 DPI); html2canvas
- * scales x3 to get ~288 DPI.
+ * scales x3.5 to get ~336 DPI.
  *
- * Uses explicit DAISY light palette so prints are always warm-paper
- * regardless of UI theme.
+ * Theme-aware: picks light or dark palette based on `isDark` prop so
+ * the export is a faithful snapshot of what the user is viewing.
  */
-const ExportSheet = forwardRef(function ExportSheet({ year, month, images }, ref) {
+const ExportSheet = forwardRef(function ExportSheet({ year, month, images, isDark = false }, ref) {
   const botanical = botanicalForMonth(month)
   const dim = daysInMonth(year, month)
   const startDay = firstWeekday(year, month)
   const memoryCount = Object.keys(images || {}).length
   const fullyBloomed = memoryCount === dim && memoryCount > 0
+  const C = isDark ? DARK_PALETTE : LIGHT_PALETTE
 
-  // Build grid (5 or 6 rows depending on month). We always render 6 rows for consistent height.
   const totalCells = 42
   const cells = []
   for (let i = 0; i < startDay; i++) cells.push({ blank: true })
@@ -41,21 +77,10 @@ const ExportSheet = forwardRef(function ExportSheet({ year, month, images }, ref
   }
   while (cells.length < totalCells) cells.push({ blank: true, trail: true })
 
-  // ---------- color tokens (light palette, fixed) ----------
-  const C = {
-    bg:      '#F7F3EA',
-    paper:   '#FBF8EE',
-    ink:     '#4F4A44',
-    inkSoft: 'rgba(79, 74, 68, 0.55)',
-    border:  'rgba(79, 74, 68, 0.22)',
-    clay:    '#9A744A',
-    butter:  '#E3C66A',
-    sage:    '#C6D3B2',
-  }
-
   return (
     <div
       ref={ref}
+      className={isDark ? 'dhwani-export-sheet dark' : 'dhwani-export-sheet'}
       style={{
         position: 'fixed',
         left: '-10000px',
@@ -64,11 +89,10 @@ const ExportSheet = forwardRef(function ExportSheet({ year, month, images }, ref
         height: '1123px',
         backgroundColor: C.bg,
         color: C.ink,
-        fontFamily: "'Fraunces', Georgia, serif",
+        fontFamily: "'Fraunces', Georgia, serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji'",
         overflow: 'hidden',
-        // subtle paper texture via two small dot patterns
         backgroundImage:
-          'radial-gradient(rgba(79,74,68,0.045) 1px, transparent 1px), radial-gradient(rgba(79,74,68,0.028) 1px, transparent 1px)',
+          `radial-gradient(${C.textureA} 1px, transparent 1px), radial-gradient(${C.textureB} 1px, transparent 1px)`,
         backgroundSize: '32px 32px, 17px 17px',
         backgroundPosition: '0 0, 8px 11px',
       }}
@@ -90,17 +114,17 @@ const ExportSheet = forwardRef(function ExportSheet({ year, month, images }, ref
         {/* HEADER */}
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 18 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            {/* daisy logo */}
+            {/* daisy-flower logo mark */}
             <svg width="42" height="42" viewBox="0 0 60 60">
               {Array.from({ length: 8 }).map((_, i) => (
                 <ellipse key={i} cx="30" cy="14" rx="5" ry="10"
                   transform={`rotate(${i * 45} 30 30)`}
-                  fill="#FBFAF3" stroke={C.clay} strokeWidth="0.8" />
+                  fill={C.daisyPetal} stroke={C.daisyEdge} strokeWidth="0.8" />
               ))}
-              <circle cx="30" cy="30" r="6" fill={C.butter} stroke={C.clay} strokeWidth="1" />
+              <circle cx="30" cy="30" r="6" fill={C.daisyCenter} stroke={C.daisyEdge} strokeWidth="1" />
             </svg>
             <div style={{ lineHeight: 1 }}>
-              <div style={{ fontFamily: "'Caveat', cursive", fontSize: 38, color: C.clay, lineHeight: 1 }}>daisy</div>
+              <div style={{ fontFamily: "'Caveat', cursive", fontSize: 38, color: C.clay, lineHeight: 1 }}>DHWANI</div>
               <div style={{ fontSize: 9, letterSpacing: '0.28em', textTransform: 'uppercase', color: C.inkSoft, marginTop: 4 }}>memory garden</div>
             </div>
           </div>
@@ -126,7 +150,7 @@ const ExportSheet = forwardRef(function ExportSheet({ year, month, images }, ref
             </span>
           </div>
           <div style={{ marginTop: 4, fontSize: 11, letterSpacing: '0.3em', textTransform: 'uppercase', color: C.inkSoft }}>
-            {memoryCount} {memoryCount === 1 ? 'memory' : 'memories'}{fullyBloomed ? ' · fully bloomed' : ''}
+            {memoryCount} {memoryCount === 1 ? 'memory' : 'memories'}{fullyBloomed ? ' \u00b7 fully bloomed' : ''}
           </div>
         </div>
 
@@ -151,12 +175,7 @@ const ExportSheet = forwardRef(function ExportSheet({ year, month, images }, ref
         }}>
           {cells.map((c, idx) => {
             if (c.blank) {
-              return (
-                <div key={`b-${idx}`} style={{
-                  background: 'transparent',
-                  borderRadius: 6,
-                }} />
-              )
+              return <div key={`b-${idx}`} style={{ background: 'transparent', borderRadius: 6 }} />
             }
             return (
               <div key={c.key || `d-${c.day}`}
@@ -165,11 +184,12 @@ const ExportSheet = forwardRef(function ExportSheet({ year, month, images }, ref
                   backgroundColor: C.paper,
                   borderRadius: 6,
                   border: `1px solid ${C.border}`,
-                  boxShadow: '0 1px 2px rgba(79,74,68,0.06)',
+                  boxShadow: isDark
+                    ? '0 1px 2px rgba(0,0,0,0.25)'
+                    : '0 1px 2px rgba(79,74,68,0.06)',
                   overflow: 'hidden',
                 }}
               >
-                {/* date */}
                 <div style={{
                   position: 'absolute', top: 4, left: 6, zIndex: 2,
                   fontSize: 10, lineHeight: 1, color: C.inkSoft,
@@ -185,7 +205,7 @@ const ExportSheet = forwardRef(function ExportSheet({ year, month, images }, ref
                   <div style={{
                     position: 'absolute', inset: 0,
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    color: 'rgba(79,74,68,0.15)', fontSize: 18,
+                    color: C.emptyDot, fontSize: 18,
                   }}>·</div>
                 )}
               </div>
@@ -203,18 +223,13 @@ const ExportSheet = forwardRef(function ExportSheet({ year, month, images }, ref
           alignItems: 'end',
           minHeight: 0,
         }}>
-          {/* Botanical illustration */}
           <div style={{ height: 230, display: 'flex', alignItems: 'flex-end' }}>
             <div style={{ width: '100%', height: '100%' }}>
               <Botanical kind={botanical.key} count={memoryCount} />
             </div>
           </div>
 
-          {/* Quote + completion note */}
-          <div style={{
-            display: 'flex', flexDirection: 'column', justifyContent: 'flex-end',
-            paddingBottom: 8,
-          }}>
+          <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', paddingBottom: 8 }}>
             <div style={{
               fontFamily: "'Caveat', cursive",
               fontSize: 32,
@@ -242,7 +257,7 @@ const ExportSheet = forwardRef(function ExportSheet({ year, month, images }, ref
               color: C.inkSoft,
               fontFamily: 'Inter, sans-serif',
             }}>
-              daisy · {MONTH_NAMES[month - 1]} {year}
+              DHWANI · {MONTH_NAMES[month - 1]} {year}
             </div>
           </div>
         </div>

@@ -2,8 +2,8 @@ import './globals.css'
 import { Toaster } from 'sonner'
 
 export const metadata = {
-  title: 'DAISY — your private memory garden',
-  description: 'A botanical scrapbook calendar for preserving everyday moments.',
+  title: 'DHWANI — your private memory garden',
+  description: 'DHWANI — Ordinary days, gently kept. A botanical scrapbook calendar for preserving everyday moments.',
 }
 
 export default function RootLayout({ children }) {

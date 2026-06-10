@@ -50,12 +50,12 @@ function App() {
 
   // Export handlers (delegated to lib/export with the offscreen ExportSheet)
   const buildExportFilename = (ext) =>
-    `DAISY_${MONTH_NAMES[month - 1]}_${year}.${ext}`
+    `DHWANI_${MONTH_NAMES[month - 1]}_${year}.${ext}`
 
   const handleExportPDF = async () => {
     if (!exportSheetRef.current) return
     try {
-      await exportAsPDF(exportSheetRef.current, buildExportFilename('pdf'))
+      await exportAsPDF(exportSheetRef.current, buildExportFilename('pdf'), { isDark })
       toast.success('Saved as PDF', { description: `${MONTH_NAMES[month-1]} ${year}` })
     } catch (e) {
       console.error('PDF export failed', e)
@@ -65,7 +65,7 @@ function App() {
   const handleExportPNG = async () => {
     if (!exportSheetRef.current) return
     try {
-      await exportAsPNG(exportSheetRef.current, buildExportFilename('png'))
+      await exportAsPNG(exportSheetRef.current, buildExportFilename('png'), { isDark })
       toast.success('Saved as PNG', { description: `${MONTH_NAMES[month-1]} ${year}` })
     } catch (e) {
       console.error('PNG export failed', e)
@@ -103,8 +103,18 @@ function App() {
     localStorage.setItem('daisy-theme', next ? 'dark' : 'light')
   }
 
-  const goPrev = () => { setDirection(-1); setMonth(m => { if (m === 1) { setYear(y=>y-1); return 12 } return m-1 }) ; emitPetals() }
-  const goNext = () => { setDirection(+1); setMonth(m => { if (m === 12){ setYear(y=>y+1); return 1 } return m+1 }) ; emitPetals() }
+  // Atomic month navigation using native Date arithmetic.
+  // Setting setYear inside a setMonth updater is impure and React 18
+  // StrictMode double-invokes updaters — that caused the year-skipping bug.
+  const navigateBy = (delta) => {
+    setDirection(delta > 0 ? +1 : -1)
+    const next = new Date(year, (month - 1) + delta, 1)
+    setYear(next.getFullYear())
+    setMonth(next.getMonth() + 1)
+    emitPetals()
+  }
+  const goPrev = () => navigateBy(-1)
+  const goNext = () => navigateBy(+1)
 
   function emitPetals(opts = {}) {
     const kind = opts.kind // explicit kind wins; otherwise petal renders with month botanical at draw time
@@ -258,7 +268,7 @@ function App() {
           <div>
             <div className="flex items-center justify-between">
               <div>
-                <p className="font-handwritten text-3xl leading-none text-[hsl(var(--daisy-clay))]">daisy</p>
+                <p className="font-handwritten text-3xl leading-none text-[hsl(var(--daisy-clay))]">DHWANI</p>
                 <p className="text-[11px] uppercase tracking-[0.22em] mt-1 text-muted-foreground">memory garden</p>
               </div>
               <DaisyToggle isDark={isDark} onToggle={toggleTheme} />
@@ -420,7 +430,7 @@ function App() {
       </div>
 
       {/* Offscreen export sheet (rendered hidden, captured by html2canvas) */}
-      <ExportSheet ref={exportSheetRef} year={year} month={month} images={images} />
+      <ExportSheet ref={exportSheetRef} year={year} month={month} images={images} isDark={isDark} />
 
       {/* Celebration overlay (full month bloomed) */}
       <CelebrationOverlay celebration={celebration} isDark={isDark} />
