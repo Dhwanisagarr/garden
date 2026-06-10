@@ -11,6 +11,7 @@ import SVGDefs from '@/components/SVGDefs'
 import { ParticleSVG, Butterfly, Firefly } from '@/components/Particles'
 import ExportPanel from '@/components/ExportPanel'
 import ExportSheet from '@/components/ExportSheet'
+import YearInBloom from '@/components/YearInBloom'
 import { exportAsPDF, exportAsPNG } from '@/lib/export'
 import { botanicalForMonth } from '@/lib/botanicals'
 import { dateKey, putImage, deleteImage, getMonthImages, listAllMemoryKeys } from '@/lib/daisy-db'
@@ -44,6 +45,8 @@ function App() {
   const [searchOpen, setSearchOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [searchResults, setSearchResults] = useState([])
+  const [view, setView] = useState('month')              // 'month' | 'year'
+  const [yearCounts, setYearCounts] = useState({})       // { 1: 5, 2: 12, ... } for the active year
   const fileInputRef = useRef(null)
   const pendingDayRef = useRef(null)
   const exportSheetRef = useRef(null)
@@ -233,6 +236,40 @@ function App() {
     return () => { cancelled = true }
   }, [searchQuery, year, month])
 
+  // Year-in-bloom counts: load count of memories per month for the active year
+  useEffect(() => {
+    if (view !== 'year') return
+    let cancelled = false
+    ;(async () => {
+      try {
+        const all = await listAllMemoryKeys()
+        const counts = {}
+        for (let m = 1; m <= 12; m++) counts[m] = 0
+        for (const k of all) {
+          const m = String(k).match(/^(\d{4})-(\d{2})-/)
+          if (!m) continue
+          if (+m[1] !== year) continue
+          counts[+m[2]] = (counts[+m[2]] || 0) + 1
+        }
+        if (!cancelled) setYearCounts(counts)
+      } catch (e) {
+        if (!cancelled) setYearCounts({})
+      }
+    })()
+    return () => { cancelled = true }
+  }, [view, year, images]) // recompute when current-month images change too
+
+  // Year navigation helpers (used only in 'year' view)
+  const goPrevYear = () => { setYear(y => y - 1); emitPetals({ count: 4 }) }
+  const goNextYear = () => { setYear(y => y + 1); emitPetals({ count: 4 }) }
+  const openYearView = () => { setView('year') }
+  const closeYearView = () => { setView('month') }
+  const handlePickMonth = (m) => {
+    setMonth(m)
+    setView('month')
+    emitPetals({ kind: botanicalForMonth(m).key, count: 6 })
+  }
+
   if (!mounted) return null
 
   return (
@@ -263,7 +300,7 @@ function App() {
 
       <div className="h-full w-full grid grid-cols-[300px_1fr] gap-0">
         {/* ---------------- SIDEBAR ---------------- */}
-        <aside className="h-full flex flex-col justify-between p-6 border-r border-border/60 relative"
+        <aside className="h-full min-h-0 flex flex-col justify-between p-6 border-r border-border/60 relative"
           style={{ background: 'hsl(var(--daisy-paper))' }}>
           <div>
             <div className="flex items-center justify-between">
@@ -312,57 +349,92 @@ function App() {
         </aside>
 
         {/* ---------------- MAIN ---------------- */}
-        <main className="h-full flex flex-col px-8 py-6 relative">
+        <main className="h-full min-h-0 flex flex-col px-8 py-6 relative">
           {/* Header */}
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-6 select-none">
-              <button onClick={goPrev}
+              <button onClick={() => view === 'month' ? goPrev() : goPrevYear()}
                 className="p-2 rounded-full hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
-                aria-label="Previous month">
+                aria-label={view === 'month' ? 'Previous month' : 'Previous year'}>
                 <ChevronLeft className="w-6 h-6" strokeWidth={1.4} />
               </button>
               <AnimatePresence mode="wait">
-                <motion.h1
-                  key={`${year}-${month}`}
-                  initial={{ opacity: 0, x: direction * 30 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -direction * 30 }}
-                  transition={{ duration: 0.45, ease: 'easeOut' }}
-                  className="font-serif-display text-4xl md:text-5xl tracking-tight"
-                  style={{ fontWeight: 500, letterSpacing: '-0.01em' }}
-                >
-                  <span className="text-[hsl(var(--daisy-ink))]">{MONTH_NAMES[month-1]}</span>{' '}
-                  <span className="text-[hsl(var(--daisy-clay))] italic font-handwritten text-5xl md:text-6xl ml-1">{year}</span>
-                </motion.h1>
+                {view === 'month' ? (
+                  <motion.h1
+                    key={`m-${year}-${month}`}
+                    initial={{ opacity: 0, x: direction * 30 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -direction * 30 }}
+                    transition={{ duration: 0.45, ease: 'easeOut' }}
+                    className="font-serif-display text-4xl md:text-5xl tracking-tight"
+                    style={{ fontWeight: 500, letterSpacing: '-0.01em' }}
+                  >
+                    <span className="text-[hsl(var(--daisy-ink))]">{MONTH_NAMES[month-1]}</span>{' '}
+                    <span className="text-[hsl(var(--daisy-clay))] italic font-handwritten text-5xl md:text-6xl ml-1">{year}</span>
+                  </motion.h1>
+                ) : (
+                  <motion.h1
+                    key={`y-${year}`}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    transition={{ duration: 0.4, ease: 'easeOut' }}
+                    className="font-serif-display text-4xl md:text-5xl tracking-tight flex items-baseline gap-3"
+                    style={{ fontWeight: 500, letterSpacing: '-0.01em' }}
+                  >
+                    <span className="text-[hsl(var(--daisy-clay))] italic font-handwritten text-5xl md:text-6xl">{year}</span>
+                    <span className="text-[12px] tracking-[0.32em] uppercase text-muted-foreground font-sans-clean">in bloom</span>
+                  </motion.h1>
+                )}
               </AnimatePresence>
-              <button onClick={goNext}
+              <button onClick={() => view === 'month' ? goNext() : goNextYear()}
                 className="p-2 rounded-full hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
-                aria-label="Next month">
+                aria-label={view === 'month' ? 'Next month' : 'Next year'}>
                 <ChevronRight className="w-6 h-6" strokeWidth={1.4} />
               </button>
             </div>
 
             <div className="flex items-center gap-3">
-              <SearchField
-                isDark={isDark}
-                value={searchQuery}
-                onChange={setSearchQuery}
-                results={searchResults}
-                open={searchOpen}
-                onOpenChange={setSearchOpen}
-                onPickResult={(r) => {
-                  setDirection(r.year > year || (r.year === year && r.month > month) ? +1 : -1)
-                  setYear(r.year); setMonth(r.month)
-                  setSearchOpen(false); setSearchQuery('')
-                  if (r.day) {
-                    setHighlightDay(r.day)
-                    setTimeout(() => setHighlightDay(null), 2400)
-                  }
-                  emitPetals({ kind: botanicalForMonth(r.month).key, count: 4 })
-                }}
-              />
+              {view === 'month' && (
+                <SearchField
+                  isDark={isDark}
+                  value={searchQuery}
+                  onChange={setSearchQuery}
+                  results={searchResults}
+                  open={searchOpen}
+                  onOpenChange={setSearchOpen}
+                  onPickResult={(r) => {
+                    setDirection(r.year > year || (r.year === year && r.month > month) ? +1 : -1)
+                    setYear(r.year); setMonth(r.month)
+                    setSearchOpen(false); setSearchQuery('')
+                    if (r.day) {
+                      setHighlightDay(r.day)
+                      setTimeout(() => setHighlightDay(null), 2400)
+                    }
+                    emitPetals({ kind: botanicalForMonth(r.month).key, count: 4 })
+                  }}
+                />
+              )}
+
+              {/* Year-in-Bloom toggle */}
               <button
-                onClick={() => { const t = new Date(); setYear(t.getFullYear()); setMonth(t.getMonth()+1); emitPetals() }}
+                type="button"
+                onClick={() => view === 'month' ? openYearView() : closeYearView()}
+                aria-label={view === 'month' ? 'Year in Bloom' : 'Back to month'}
+                title={view === 'month' ? 'Year in Bloom' : 'Back to month'}
+                className="w-9 h-9 rounded-full flex items-center justify-center text-muted-foreground hover:text-[hsl(var(--daisy-clay))] hover:bg-muted/70 transition-colors"
+              >
+                <YearGridIcon active={view === 'year'} />
+              </button>
+
+              <button
+                onClick={() => {
+                  const t = new Date()
+                  setYear(t.getFullYear())
+                  setMonth(t.getMonth()+1)
+                  setView('month')
+                  emitPetals()
+                }}
                 className="text-xs uppercase tracking-[0.22em] text-muted-foreground hover:text-foreground transition-colors font-sans-clean"
               >
                 Today
@@ -370,67 +442,99 @@ function App() {
             </div>
           </div>
 
-          {/* Weekday strip */}
-          <div className="grid grid-cols-7 gap-3 mb-2 px-1">
-            {WEEKDAYS.map(w => (
-              <div key={w} className="text-center text-[11px] tracking-[0.18em] uppercase text-muted-foreground/70 font-sans-clean">
-                {w}
-              </div>
-            ))}
-          </div>
-
-          {/* Calendar grid - fills remaining viewport */}
-          <div className="flex-1 min-h-0 relative">
-            <AnimatePresence initial={false} custom={direction} mode="wait">
+          {/* Body: either month grid or year-in-bloom */}
+          <AnimatePresence mode="wait">
+            {view === 'month' ? (
               <motion.div
-                key={`${year}-${month}-grid`}
-                custom={direction}
-                initial={{ opacity: 0, x: direction * 50 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -direction * 50 }}
+                key="month-body"
+                initial={{ opacity: 0, scale: 1.04 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 1.04 }}
                 transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-                className="absolute inset-0 grid grid-cols-7 gap-3 auto-rows-fr"
+                className="flex-1 min-h-0 flex flex-col"
               >
-                {grid.map((cell, idx) => {
-                  if (cell.blank) {
-                    return <div key={cell.key} className="opacity-0" />
-                  }
-                  const key = cell.key
-                  const img = images[key]
-                  const isToday = (
-                    today.getFullYear() === year &&
-                    today.getMonth() + 1 === month &&
-                    today.getDate() === cell.day
-                  )
-                  return (
-                    <DayTile
-                      key={key}
-                      day={cell.day}
-                      dKey={key}
-                      img={img}
-                      isToday={isToday}
-                      onActivate={() => openPicker(cell.day)}
-                      onPreview={() => setPreview(key)}
-                      onDelete={() => removeMemory(key)}
-                      onReplace={() => openPicker(cell.day)}
-                      isTouchRef={isTouchRef}
-                      hovered={hoveredDay === cell.day}
-                      onHover={(h) => setHoveredDay(h ? cell.day : null)}
-                      highlighted={highlightDay === cell.day}
-                    />
-                  )
-                })}
-              </motion.div>
-            </AnimatePresence>
-          </div>
+                {/* Weekday strip */}
+                <div className="grid grid-cols-7 gap-3 mb-2 px-1">
+                  {WEEKDAYS.map(w => (
+                    <div key={w} className="text-center text-[11px] tracking-[0.18em] uppercase text-muted-foreground/70 font-sans-clean">
+                      {w}
+                    </div>
+                  ))}
+                </div>
 
-          {/* Export — botanical icon at bottom-right of the calendar page */}
-          <ExportPanel
-            disabled={Object.keys(images).length === 0}
-            monthLabel={`${MONTH_NAMES[month-1]} ${year}`}
-            onExportPDF={handleExportPDF}
-            onExportPNG={handleExportPNG}
-          />
+                {/* Calendar grid - fills remaining viewport */}
+                <div className="flex-1 min-h-0 relative">
+                  <AnimatePresence initial={false} custom={direction} mode="wait">
+                    <motion.div
+                      key={`${year}-${month}-grid`}
+                      custom={direction}
+                      initial={{ opacity: 0, x: direction * 50 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: -direction * 50 }}
+                      transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+                      className="absolute inset-0 grid grid-cols-7 gap-3 auto-rows-fr"
+                    >
+                      {grid.map((cell, idx) => {
+                        if (cell.blank) {
+                          return <div key={cell.key} className="opacity-0" />
+                        }
+                        const key = cell.key
+                        const img = images[key]
+                        const isToday = (
+                          today.getFullYear() === year &&
+                          today.getMonth() + 1 === month &&
+                          today.getDate() === cell.day
+                        )
+                        return (
+                          <DayTile
+                            key={key}
+                            day={cell.day}
+                            dKey={key}
+                            img={img}
+                            isToday={isToday}
+                            onActivate={() => openPicker(cell.day)}
+                            onPreview={() => setPreview(key)}
+                            onDelete={() => removeMemory(key)}
+                            onReplace={() => openPicker(cell.day)}
+                            isTouchRef={isTouchRef}
+                            hovered={hoveredDay === cell.day}
+                            onHover={(h) => setHoveredDay(h ? cell.day : null)}
+                            highlighted={highlightDay === cell.day}
+                          />
+                        )
+                      })}
+                    </motion.div>
+                  </AnimatePresence>
+                </div>
+              </motion.div>
+            ) : (
+              <motion.div
+                key="year-body"
+                initial={{ opacity: 0, scale: 0.94 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.94 }}
+                transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+                className="flex-1 min-h-0"
+              >
+                <YearInBloom
+                  year={year}
+                  memoryCounts={yearCounts}
+                  currentMonth={month}
+                  onSelectMonth={handlePickMonth}
+                />
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Export — botanical icon at bottom-right of the calendar page (month view only) */}
+          {view === 'month' && (
+            <ExportPanel
+              disabled={Object.keys(images).length === 0}
+              monthLabel={`${MONTH_NAMES[month-1]} ${year}`}
+              onExportPDF={handleExportPDF}
+              onExportPNG={handleExportPNG}
+            />
+          )}
         </main>
       </div>
 
@@ -482,6 +586,24 @@ function App() {
         )}
       </AnimatePresence>
     </div>
+  )
+}
+
+// ---------- Year-in-Bloom entry icon (4 tiny botanical squares) ----------
+function YearGridIcon({ active = false }) {
+  const fill = active ? 'currentColor' : 'transparent'
+  return (
+    <svg width="20" height="20" viewBox="0 0 22 22" fill="none">
+      {[[3,3],[12,3],[3,12],[12,12]].map(([x,y], i) => (
+        <g key={i}>
+          <rect x={x} y={y} width="7" height="7" rx="1.4"
+            stroke="currentColor" strokeWidth="1.2" fill={fill} fillOpacity={active ? 0.12 : 0} />
+          {/* tiny bloom inside */}
+          <circle cx={x+3.5} cy={y+3.5} r="1.4" fill="currentColor" opacity={active ? 0.85 : 0.55} />
+          <line x1={x+3.5} y1={y+3.5} x2={x+3.5} y2={y+6} stroke="currentColor" strokeWidth="0.9" opacity={active ? 0.7 : 0.45} />
+        </g>
+      ))}
+    </svg>
   )
 }
 
