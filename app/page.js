@@ -12,8 +12,11 @@ import { ParticleSVG, Butterfly, Firefly } from '@/components/Particles'
 import ExportPanel from '@/components/ExportPanel'
 import ExportSheet from '@/components/ExportSheet'
 import YearInBloom from '@/components/YearInBloom'
+import WelcomeModal from '@/components/WelcomeModal'
+import SettingsPanel from '@/components/SettingsPanel'
 import { exportAsPDF, exportAsPNG } from '@/lib/export'
 import { botanicalForMonth } from '@/lib/botanicals'
+import { gardenTitle, buildExportFilename } from '@/lib/garden'
 import { dateKey, putImage, deleteImage, getMonthImages, listAllMemoryKeys } from '@/lib/daisy-db'
 
 const MONTH_NAMES = [
@@ -47,18 +50,20 @@ function App() {
   const [searchResults, setSearchResults] = useState([])
   const [view, setView] = useState('month')              // 'month' | 'year'
   const [yearCounts, setYearCounts] = useState({})       // { 1: 5, 2: 12, ... } for the active year
+  const [gardenName, setGardenName] = useState('')       // user's personalized name
+  const [welcomeOpen, setWelcomeOpen] = useState(false)
   const fileInputRef = useRef(null)
   const pendingDayRef = useRef(null)
   const exportSheetRef = useRef(null)
 
   // Export handlers (delegated to lib/export with the offscreen ExportSheet)
-  const buildExportFilename = (ext) =>
-    `DHWANI_${MONTH_NAMES[month - 1]}_${year}.${ext}`
+  const buildExportName = (ext) =>
+    buildExportFilename({ name: gardenName, monthName: MONTH_NAMES[month - 1], year, ext })
 
   const handleExportPDF = async () => {
     if (!exportSheetRef.current) return
     try {
-      await exportAsPDF(exportSheetRef.current, buildExportFilename('pdf'), { isDark })
+      await exportAsPDF(exportSheetRef.current, buildExportName('pdf'), { isDark })
       toast.success('Saved as PDF', { description: `${MONTH_NAMES[month-1]} ${year}` })
     } catch (e) {
       console.error('PDF export failed', e)
@@ -68,7 +73,7 @@ function App() {
   const handleExportPNG = async () => {
     if (!exportSheetRef.current) return
     try {
-      await exportAsPNG(exportSheetRef.current, buildExportFilename('png'), { isDark })
+      await exportAsPNG(exportSheetRef.current, buildExportName('png'), { isDark })
       toast.success('Saved as PNG', { description: `${MONTH_NAMES[month-1]} ${year}` })
     } catch (e) {
       console.error('PNG export failed', e)
@@ -76,14 +81,40 @@ function App() {
     }
   }
 
-  // ----- mount: theme + load images
+  // ----- mount: theme + load images + load garden name
   useEffect(() => {
     setMounted(true)
     const saved = typeof window !== 'undefined' ? localStorage.getItem('daisy-theme') : null
     const dark = saved === 'dark'
     setIsDark(dark)
     document.documentElement.classList.toggle('dark', dark)
+
+    // load garden name
+    const savedName = typeof window !== 'undefined' ? localStorage.getItem('daisy-garden-name') : null
+    if (savedName && savedName.trim()) {
+      setGardenName(savedName.trim())
+    } else {
+      setWelcomeOpen(true)
+    }
   }, [])
+
+  const handleCreateGarden = (name) => {
+    const clean = name.trim()
+    if (!clean) return
+    setGardenName(clean)
+    try { localStorage.setItem('daisy-garden-name', clean) } catch {}
+    setWelcomeOpen(false)
+    emitPetals({ kind: botanical?.key, count: 8 })
+    toast.success('Your garden has been planted', { description: gardenTitle(clean) })
+  }
+
+  const handleRenameGarden = (name) => {
+    const clean = name.trim()
+    if (!clean) return
+    setGardenName(clean)
+    try { localStorage.setItem('daisy-garden-name', clean) } catch {}
+    toast.success('Garden renamed', { description: gardenTitle(clean) })
+  }
 
   // Load month images whenever year/month changes
   useEffect(() => {
@@ -345,6 +376,7 @@ function App() {
           <div className="text-[11px] text-muted-foreground font-sans-clean leading-relaxed">
             <p className="italic">"Ordinary days, gently kept."</p>
             <p className="mt-2 opacity-70">Your memories live privately on this device.</p>
+            <p className="mt-3 text-[9px] uppercase tracking-[0.28em] opacity-60">made with Dhwani</p>
           </div>
         </aside>
 
@@ -360,31 +392,49 @@ function App() {
               </button>
               <AnimatePresence mode="wait">
                 {view === 'month' ? (
-                  <motion.h1
+                  <motion.div
                     key={`m-${year}-${month}`}
                     initial={{ opacity: 0, x: direction * 30 }}
                     animate={{ opacity: 1, x: 0 }}
                     exit={{ opacity: 0, x: -direction * 30 }}
                     transition={{ duration: 0.45, ease: 'easeOut' }}
-                    className="font-serif-display text-4xl md:text-5xl tracking-tight"
-                    style={{ fontWeight: 500, letterSpacing: '-0.01em' }}
+                    className="flex flex-col leading-none"
                   >
-                    <span className="text-[hsl(var(--daisy-ink))]">{MONTH_NAMES[month-1]}</span>{' '}
-                    <span className="text-[hsl(var(--daisy-clay))] italic font-handwritten text-5xl md:text-6xl ml-1">{year}</span>
-                  </motion.h1>
+                    {gardenName && (
+                      <h2 className="font-serif-display italic text-[hsl(var(--daisy-clay))] text-2xl md:text-3xl mb-1" style={{ fontWeight: 400, letterSpacing: '0.005em' }}>
+                        {gardenTitle(gardenName)}
+                      </h2>
+                    )}
+                    <h1
+                      className="font-serif-display text-3xl md:text-4xl tracking-tight"
+                      style={{ fontWeight: 500, letterSpacing: '-0.01em' }}
+                    >
+                      <span className="text-[hsl(var(--daisy-ink))]">{MONTH_NAMES[month-1]}</span>{' '}
+                      <span className="text-[hsl(var(--daisy-clay))] italic font-handwritten text-4xl md:text-5xl ml-1">{year}</span>
+                    </h1>
+                  </motion.div>
                 ) : (
-                  <motion.h1
+                  <motion.div
                     key={`y-${year}`}
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -10 }}
                     transition={{ duration: 0.4, ease: 'easeOut' }}
-                    className="font-serif-display text-4xl md:text-5xl tracking-tight flex items-baseline gap-3"
-                    style={{ fontWeight: 500, letterSpacing: '-0.01em' }}
+                    className="flex flex-col leading-none"
                   >
-                    <span className="text-[hsl(var(--daisy-clay))] italic font-handwritten text-5xl md:text-6xl">{year}</span>
-                    <span className="text-[12px] tracking-[0.32em] uppercase text-muted-foreground font-sans-clean">in bloom</span>
-                  </motion.h1>
+                    {gardenName && (
+                      <h2 className="font-serif-display italic text-[hsl(var(--daisy-clay))] text-2xl md:text-3xl mb-1" style={{ fontWeight: 400, letterSpacing: '0.005em' }}>
+                        {gardenTitle(gardenName)}
+                      </h2>
+                    )}
+                    <h1
+                      className="font-serif-display text-3xl md:text-4xl tracking-tight flex items-baseline gap-3"
+                      style={{ fontWeight: 500, letterSpacing: '-0.01em' }}
+                    >
+                      <span className="text-[hsl(var(--daisy-clay))] italic font-handwritten text-4xl md:text-5xl">{year}</span>
+                      <span className="text-[11px] tracking-[0.32em] uppercase text-muted-foreground font-sans-clean">in bloom</span>
+                    </h1>
+                  </motion.div>
                 )}
               </AnimatePresence>
               <button onClick={() => view === 'month' ? goNext() : goNextYear()}
@@ -426,6 +476,9 @@ function App() {
               >
                 <YearGridIcon active={view === 'year'} />
               </button>
+
+              {/* Settings */}
+              <SettingsPanel gardenName={gardenName} onSave={handleRenameGarden} />
 
               <button
                 onClick={() => {
@@ -538,8 +591,11 @@ function App() {
         </main>
       </div>
 
+      {/* Welcome / first-time setup */}
+      <WelcomeModal open={welcomeOpen && mounted} onCreate={handleCreateGarden} />
+
       {/* Offscreen export sheet (rendered hidden, captured by html2canvas) */}
-      <ExportSheet ref={exportSheetRef} year={year} month={month} images={images} isDark={isDark} />
+      <ExportSheet ref={exportSheetRef} year={year} month={month} images={images} isDark={isDark} gardenName={gardenName} />
 
       {/* Celebration overlay (full month bloomed) */}
       <CelebrationOverlay celebration={celebration} isDark={isDark} />

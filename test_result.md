@@ -185,7 +185,19 @@ frontend:
     status_history:
       - working: true
         agent: "main"
-        comment: "Added a 3x4 botanical-atlas view for the entire year. Entry icon: small 2x2 botanical grid (4 squares each with a tiny bloom) sitting between search and Today in the header. Clicking switches to Year view with a 500ms scale/fade transition; clicking it again or any month card returns to the corresponding month with a matching transition. Title swaps from 'June 2026' to '2026 IN BLOOM' with year-only navigation arrows that use atomic native-Date arithmetic (no year skips). Each month card shows month name, botanical species name (SNOWDROPS, TULIPS, ..., WINTER BERRIES AND HOLLY), live Botanical preview that reflects actual memory count for that month, percentage badge or 'fully bloomed' handwritten note for completed months, soft butter glow ring on completed months, current-month subtle clay ring, and italic 'X/N memories' footer ('A still garden' when 0). Memory counts fetched via listAllMemoryKeys filtered by year. Verified: April 60% with daisies, June 30/30 'fully bloomed' with sunflowers + glow, October 26% maple sprigs, December 6% holly. Click into any month preserves memories exactly. Critical CSS Grid fix applied: added min-h-0 to aside and main so grid items respect viewport height (otherwise grid items default to min-height:auto and overflow). Cards now correctly sized at 508x207 each, full 3x4 grid fits the viewport. SearchField and ExportPanel hidden while in year view. Sidebar untouched."
+        comment: "Added a 3x4 botanical-atlas view for the entire year. Verified card sizing 508x207 fits viewport after applying min-h-0 to grid items."
+
+  - task: "Personal garden names"
+    implemented: true
+    working: true
+    file: "lib/garden.js, components/WelcomeModal.jsx, components/SettingsPanel.jsx, components/ExportSheet.jsx, app/page.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "main"
+        comment: "Added first-time onboarding modal with 'What should we call your garden?' prompt, live preview ('Your garden will appear as: Sophia's Garden'), Create Garden button, MADE WITH DHWANI attribution. Possessive logic: names ending in 's' get apostrophe-only (James' Garden), others get 's (Sophia's Garden). Garden name persisted in localStorage 'daisy-garden-name'. Header now shows '<Name>'s Garden' (italic clay serif) ABOVE the existing 'June 2026' or '2026 IN BLOOM' titles. Same garden title shown in Year in Bloom view. Settings panel: small gear icon in header opens elegant popover with 'GARDEN NAME' field, live preview, Cancel/Save; renaming updates header, Year in Bloom view, and exports instantly. Export filenames use sanitized possessive stem: 'Sophia' -> 'Sophias_Garden_June_2026.pdf', 'James' -> 'James_Garden_June_2026.pdf'. Export sheet cover prominently shows '<Name>'s Garden' above 'June 2026'. Subtle 'made with Dhwani' attribution placed in sidebar bottom AND 'MADE WITH DHWANI' uppercase tracked footer on every export (PDF/PNG), in welcome modal, and in settings panel. Verified via Playwright: first-visit modal -> Sophia name -> 'Sophia's Garden' shown everywhere -> rename to James via settings -> 'James' Garden' everywhere -> export filenames correct. Vision analysis of exported PNG confirms personal+elegant aesthetic with Dhwani attribution unobtrusively present."
 
 metadata:
   created_by: "main_agent"
