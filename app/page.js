@@ -11,12 +11,13 @@ import SVGDefs from '@/components/SVGDefs'
 import { ParticleSVG, Butterfly, Firefly } from '@/components/Particles'
 import ExportPanel from '@/components/ExportPanel'
 import ExportSheet from '@/components/ExportSheet'
+import ExportInstagram from '@/components/ExportInstagram'
 import YearInBloom from '@/components/YearInBloom'
 import WelcomeModal from '@/components/WelcomeModal'
 import SettingsPanel from '@/components/SettingsPanel'
-import { exportAsPDF, exportAsPNG } from '@/lib/export'
+import { exportAsPDF, exportAsPNG, exportInstagramCarousel, exportInstagramStory } from '@/lib/export'
 import { botanicalForMonth } from '@/lib/botanicals'
-import { gardenTitle, buildExportFilename } from '@/lib/garden'
+import { buildExportFilename, gardenFilenameStem } from '@/lib/garden'
 import { dateKey, putImage, deleteImage, getMonthImages, listAllMemoryKeys } from '@/lib/daisy-db'
 
 const MONTH_NAMES = [
@@ -55,10 +56,14 @@ function App() {
   const fileInputRef = useRef(null)
   const pendingDayRef = useRef(null)
   const exportSheetRef = useRef(null)
+  const exportInstagramRef = useRef(null)
 
   // Export handlers (delegated to lib/export with the offscreen ExportSheet)
   const buildExportName = (ext) =>
     buildExportFilename({ name: gardenName, monthName: MONTH_NAMES[month - 1], year, ext })
+
+  const buildInstagramName = (suffix, ext) =>
+    `${gardenFilenameStem(gardenName)}_${MONTH_NAMES[month - 1]}_${year}_${suffix}.${ext}`
 
   const handleExportPDF = async () => {
     if (!exportSheetRef.current) return
@@ -78,6 +83,38 @@ function App() {
     } catch (e) {
       console.error('PNG export failed', e)
       toast.error('Could not export PNG')
+    }
+  }
+  const handleExportInstagramCarousel = async () => {
+    if (!exportInstagramRef.current) return
+    try {
+      const elements = exportInstagramRef.current.getCarouselElements()
+      if (!elements.length) return
+      await exportInstagramCarousel(
+        elements,
+        buildInstagramName('instagram_carousel', 'zip'),
+        { isDark }
+      )
+      toast.success('Instagram carousel saved', { description: `${elements.length} slides · ${MONTH_NAMES[month-1]} ${year}` })
+    } catch (e) {
+      console.error('Instagram carousel export failed', e)
+      toast.error('Could not export Instagram carousel')
+    }
+  }
+  const handleExportInstagramStory = async () => {
+    if (!exportInstagramRef.current) return
+    try {
+      const el = exportInstagramRef.current.getStoryElement()
+      if (!el) return
+      await exportInstagramStory(
+        el,
+        buildInstagramName('instagram_story', 'png'),
+        { isDark }
+      )
+      toast.success('Instagram story saved', { description: `${MONTH_NAMES[month-1]} ${year}` })
+    } catch (e) {
+      console.error('Instagram story export failed', e)
+      toast.error('Could not export Instagram story')
     }
   }
 
@@ -105,7 +142,7 @@ function App() {
     try { localStorage.setItem('daisy-garden-name', clean) } catch {}
     setWelcomeOpen(false)
     emitPetals({ kind: botanical?.key, count: 8 })
-    toast.success('Your garden has been planted', { description: gardenTitle(clean) })
+    toast.success('Your garden has been planted', { description: clean })
   }
 
   const handleRenameGarden = (name) => {
@@ -113,7 +150,7 @@ function App() {
     if (!clean) return
     setGardenName(clean)
     try { localStorage.setItem('daisy-garden-name', clean) } catch {}
-    toast.success('Garden renamed', { description: gardenTitle(clean) })
+    toast.success('Garden renamed', { description: clean })
   }
 
   // Load month images whenever year/month changes
@@ -340,9 +377,10 @@ function App() {
                   className="font-serif-display italic leading-none text-[hsl(var(--daisy-clay))]"
                   style={{ fontSize: '1.7rem', fontWeight: 400, letterSpacing: '0.01em' }}
                 >
-                  Dhwani
+                  {gardenName || 'Dhwani'}
                 </p>
                 <p className="text-[11px] uppercase tracking-[0.22em] mt-2 text-muted-foreground">memory garden</p>
+                <p className="mt-1.5 text-base leading-none" aria-hidden>🌼</p>
               </div>
               <DaisyToggle isDark={isDark} onToggle={toggleTheme} />
             </div>
@@ -376,7 +414,7 @@ function App() {
           <div className="text-[11px] text-muted-foreground font-sans-clean leading-relaxed">
             <p className="italic">"Ordinary days, gently kept."</p>
             <p className="mt-2 opacity-70">Your memories live privately on this device.</p>
-            <p className="mt-3 text-[9px] uppercase tracking-[0.28em] opacity-60">made with Dhwani</p>
+            <p className="mt-3 text-[9px] uppercase tracking-[0.28em] opacity-60">Crafted by Dhwani</p>
           </div>
         </aside>
 
@@ -400,11 +438,6 @@ function App() {
                     transition={{ duration: 0.45, ease: 'easeOut' }}
                     className="flex flex-col leading-none"
                   >
-                    {gardenName && (
-                      <h2 className="font-serif-display italic text-[hsl(var(--daisy-clay))] text-2xl md:text-3xl mb-1" style={{ fontWeight: 400, letterSpacing: '0.005em' }}>
-                        {gardenTitle(gardenName)}
-                      </h2>
-                    )}
                     <h1
                       className="font-serif-display text-3xl md:text-4xl tracking-tight"
                       style={{ fontWeight: 500, letterSpacing: '-0.01em' }}
@@ -422,11 +455,6 @@ function App() {
                     transition={{ duration: 0.4, ease: 'easeOut' }}
                     className="flex flex-col leading-none"
                   >
-                    {gardenName && (
-                      <h2 className="font-serif-display italic text-[hsl(var(--daisy-clay))] text-2xl md:text-3xl mb-1" style={{ fontWeight: 400, letterSpacing: '0.005em' }}>
-                        {gardenTitle(gardenName)}
-                      </h2>
-                    )}
                     <h1
                       className="font-serif-display text-3xl md:text-4xl tracking-tight flex items-baseline gap-3"
                       style={{ fontWeight: 500, letterSpacing: '-0.01em' }}
@@ -586,6 +614,8 @@ function App() {
               monthLabel={`${MONTH_NAMES[month-1]} ${year}`}
               onExportPDF={handleExportPDF}
               onExportPNG={handleExportPNG}
+              onExportInstagramCarousel={handleExportInstagramCarousel}
+              onExportInstagramStory={handleExportInstagramStory}
             />
           )}
         </main>
@@ -596,6 +626,7 @@ function App() {
 
       {/* Offscreen export sheet (rendered hidden, captured by html2canvas) */}
       <ExportSheet ref={exportSheetRef} year={year} month={month} images={images} isDark={isDark} gardenName={gardenName} />
+      <ExportInstagram ref={exportInstagramRef} year={year} month={month} images={images} isDark={isDark} gardenName={gardenName} />
 
       {/* Celebration overlay (full month bloomed) */}
       <CelebrationOverlay celebration={celebration} isDark={isDark} />

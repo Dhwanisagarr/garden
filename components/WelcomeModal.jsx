@@ -1,7 +1,7 @@
 'use client'
 import { useEffect, useRef, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { gardenTitle } from '@/lib/garden'
+import GardenIdentityPreview from '@/components/GardenIdentityPreview'
 
 /**
  * Onboarding modal. Asks for the user's name with a live garden preview.
@@ -89,8 +89,8 @@ export default function WelcomeModal({ open, onCreate }) {
                 <div className="text-[10px] uppercase tracking-[0.24em] text-muted-foreground/80 font-sans-clean">
                   Your garden will appear as
                 </div>
-                <div className="mt-1 font-serif-display italic text-[22px] text-[hsl(var(--daisy-clay))]">
-                  {trimmed ? gardenTitle(trimmed) : 'Your Garden'}
+                <div className="mt-2">
+                  <GardenIdentityPreview name={trimmed} nameClassName="text-[22px]" />
                 </div>
               </div>
 
@@ -107,7 +107,7 @@ export default function WelcomeModal({ open, onCreate }) {
               </button>
 
               <p className="mt-5 text-[10px] text-center uppercase tracking-[0.28em] text-muted-foreground/60 font-sans-clean">
-                made with DHWANI
+                Crafted by Dhwani
               </p>
             </form>
           </motion.div>

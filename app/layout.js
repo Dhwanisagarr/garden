@@ -1,5 +1,6 @@
 import './globals.css'
 import { Toaster } from 'sonner'
+import { Analytics } from '@vercel/analytics/next'
 
 export const metadata = {
   title: 'DHWANI — your private memory garden',
@@ -12,6 +13,7 @@ export default function RootLayout({ children }) {
       <body className="antialiased">
         {children}
         <Toaster position="bottom-center" toastOptions={{ style: { fontFamily: 'Fraunces, serif' } }} />
+        <Analytics />
       </body>
     </html>
   )

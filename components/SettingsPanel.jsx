@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Settings as SettingsIcon, X } from 'lucide-react'
-import { gardenTitle } from '@/lib/garden'
+import GardenIdentityPreview from '@/components/GardenIdentityPreview'
 
 /**
  * Tiny header button -> popover with editable Garden Name.
@@ -86,8 +86,8 @@ export default function SettingsPanel({ gardenName, onSave }) {
                 <div className="text-[9px] uppercase tracking-[0.22em] text-muted-foreground/80 font-sans-clean">
                   Preview
                 </div>
-                <div className="font-serif-display italic text-[16px] text-[hsl(var(--daisy-clay))] mt-0.5">
-                  {trimmed ? gardenTitle(trimmed) : 'Your Garden'}
+                <div className="mt-1.5">
+                  <GardenIdentityPreview name={trimmed} nameClassName="text-[16px]" compact />
                 </div>
               </div>
 
@@ -107,7 +107,7 @@ export default function SettingsPanel({ gardenName, onSave }) {
               </div>
 
               <div className="mt-3 text-[9px] text-center uppercase tracking-[0.28em] text-muted-foreground/60 font-sans-clean">
-                made with DHWANI
+                Crafted by Dhwani
               </div>
             </form>
           </motion.div>

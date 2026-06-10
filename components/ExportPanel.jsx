@@ -27,11 +27,13 @@ export default function ExportPanel({
   disabled,
   onExportPDF,
   onExportPNG,
+  onExportInstagramCarousel,
+  onExportInstagramStory,
   monthLabel,
 }) {
   const [open, setOpen] = useState(false)
   const [hover, setHover] = useState(false)
-  const [busy, setBusy] = useState(null) // 'pdf' | 'png' | null
+  const [busy, setBusy] = useState(null) // 'pdf' | 'png' | 'ig-carousel' | 'ig-story' | null
   const wrapperRef = useRef(null)
 
   useEffect(() => {
@@ -53,11 +55,15 @@ export default function ExportPanel({
     try {
       if (type === 'pdf') await onExportPDF?.()
       else if (type === 'png') await onExportPNG?.()
+      else if (type === 'ig-carousel') await onExportInstagramCarousel?.()
+      else if (type === 'ig-story') await onExportInstagramStory?.()
     } finally {
       setBusy(null)
       setOpen(false)
     }
   }
+
+  const isBusy = Boolean(busy)
 
   return (
     <div
@@ -106,7 +112,7 @@ export default function ExportPanel({
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 6, scale: 0.96 }}
             transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
-            className="absolute bottom-full right-0 mb-3 w-[230px] rounded-2xl bg-popover border border-border shadow-lg overflow-hidden"
+            className="absolute bottom-full right-0 mb-3 w-[250px] rounded-2xl bg-popover border border-border shadow-lg overflow-hidden"
             style={{ boxShadow: '0 14px 40px -10px hsl(var(--daisy-ink) / 0.25)' }}
           >
             <div className="px-4 pt-3 pb-2 border-b border-border/60">
@@ -119,7 +125,7 @@ export default function ExportPanel({
               <li>
                 <button
                   onClick={() => handleExport('pdf')}
-                  disabled={busy === 'png'}
+                  disabled={isBusy && busy !== 'pdf'}
                   className="w-full text-left px-4 py-2.5 flex items-baseline justify-between gap-3 hover:bg-muted/70 transition-colors"
                 >
                   <span className="font-serif-display text-[15px] text-foreground">
@@ -131,13 +137,44 @@ export default function ExportPanel({
               <li>
                 <button
                   onClick={() => handleExport('png')}
-                  disabled={busy === 'pdf'}
+                  disabled={isBusy && busy !== 'png'}
                   className="w-full text-left px-4 py-2.5 flex items-baseline justify-between gap-3 hover:bg-muted/70 transition-colors"
                 >
                   <span className="font-serif-display text-[15px] text-foreground">
                     {busy === 'png' ? 'pressing flowers…' : 'as a PNG keepsake'}
                   </span>
                   <span className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground/80 font-sans-clean">HiRes</span>
+                </button>
+              </li>
+            </ul>
+            <div className="px-4 pt-2 pb-1 border-t border-border/60">
+              <div className="text-[10px] uppercase tracking-[0.22em] text-muted-foreground font-sans-clean">
+                Export for Instagram
+              </div>
+            </div>
+            <ul className="py-1 pb-1">
+              <li>
+                <button
+                  onClick={() => handleExport('ig-carousel')}
+                  disabled={isBusy && busy !== 'ig-carousel'}
+                  className="w-full text-left px-4 py-2.5 flex items-baseline justify-between gap-3 hover:bg-muted/70 transition-colors"
+                >
+                  <span className="font-serif-display text-[15px] text-foreground">
+                    {busy === 'ig-carousel' ? 'arranging slides…' : 'Carousel'}
+                  </span>
+                  <span className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground/80 font-sans-clean">1080×1350</span>
+                </button>
+              </li>
+              <li>
+                <button
+                  onClick={() => handleExport('ig-story')}
+                  disabled={isBusy && busy !== 'ig-story'}
+                  className="w-full text-left px-4 py-2.5 flex items-baseline justify-between gap-3 hover:bg-muted/70 transition-colors"
+                >
+                  <span className="font-serif-display text-[15px] text-foreground">
+                    {busy === 'ig-story' ? 'arranging slides…' : 'Story'}
+                  </span>
+                  <span className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground/80 font-sans-clean">1080×1920</span>
                 </button>
               </li>
             </ul>

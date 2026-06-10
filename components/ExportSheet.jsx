@@ -2,7 +2,6 @@
 import { forwardRef } from 'react'
 import Botanical from '@/components/Botanical'
 import { botanicalForMonth } from '@/lib/botanicals'
-import { gardenTitle } from '@/lib/garden'
 
 const MONTH_NAMES = [
   'January','February','March','April','May','June',
@@ -133,8 +132,9 @@ const ExportSheet = forwardRef(function ExportSheet({ year, month, images, isDar
                 color: C.clay,
                 lineHeight: 1,
                 letterSpacing: '0.01em',
-              }}>Dhwani</div>
+              }}>{gardenName || 'Dhwani'}</div>
               <div style={{ fontSize: 9, letterSpacing: '0.28em', textTransform: 'uppercase', color: C.inkSoft, marginTop: 6 }}>memory garden</div>
+              <div style={{ fontSize: 14, marginTop: 4, lineHeight: 1 }} aria-hidden>🌼</div>
             </div>
           </div>
 
@@ -150,19 +150,6 @@ const ExportSheet = forwardRef(function ExportSheet({ year, month, images, isDar
 
         {/* MONTH TITLE */}
         <div style={{ textAlign: 'center', margin: '6px 0 14px' }}>
-          {gardenName && (
-            <div style={{
-              fontFamily: "'Fraunces', Georgia, serif",
-              fontStyle: 'italic',
-              fontWeight: 400,
-              fontSize: 30,
-              color: C.clay,
-              letterSpacing: '0.005em',
-              marginBottom: 4,
-            }}>
-              {gardenTitle(gardenName)}
-            </div>
-          )}
           <div style={{ display: 'inline-flex', alignItems: 'baseline', gap: 12 }}>
             <span style={{ fontSize: 44, fontWeight: 500, letterSpacing: '-0.01em', color: C.ink }}>
               {MONTH_NAMES[month - 1]}
@@ -279,7 +266,7 @@ const ExportSheet = forwardRef(function ExportSheet({ year, month, images, isDar
               color: C.inkSoft,
               fontFamily: 'Inter, sans-serif',
             }}>
-              {gardenName ? gardenTitle(gardenName) : 'memory garden'} · {MONTH_NAMES[month - 1]} {year}
+              {gardenName ? `${gardenName} · memory garden` : 'memory garden'} · {MONTH_NAMES[month - 1]} {year}
             </div>
             <div style={{
               marginTop: 4,
@@ -290,7 +277,7 @@ const ExportSheet = forwardRef(function ExportSheet({ year, month, images, isDar
               opacity: 0.7,
               fontFamily: 'Inter, sans-serif',
             }}>
-              made with DHWANI
+              Crafted by Dhwani
             </div>
           </div>
         </div>
