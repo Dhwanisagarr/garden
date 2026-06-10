@@ -268,8 +268,13 @@ function App() {
           <div>
             <div className="flex items-center justify-between">
               <div>
-                <p className="font-handwritten text-3xl leading-none text-[hsl(var(--daisy-clay))]">DHWANI</p>
-                <p className="text-[11px] uppercase tracking-[0.22em] mt-1 text-muted-foreground">memory garden</p>
+                <p
+                  className="font-serif-display italic leading-none text-[hsl(var(--daisy-clay))]"
+                  style={{ fontSize: '1.7rem', fontWeight: 400, letterSpacing: '0.01em' }}
+                >
+                  Dhwani
+                </p>
+                <p className="text-[11px] uppercase tracking-[0.22em] mt-2 text-muted-foreground">memory garden</p>
               </div>
               <DaisyToggle isDark={isDark} onToggle={toggleTheme} />
             </div>

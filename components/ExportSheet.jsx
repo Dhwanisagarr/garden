@@ -124,8 +124,16 @@ const ExportSheet = forwardRef(function ExportSheet({ year, month, images, isDar
               <circle cx="30" cy="30" r="6" fill={C.daisyCenter} stroke={C.daisyEdge} strokeWidth="1" />
             </svg>
             <div style={{ lineHeight: 1 }}>
-              <div style={{ fontFamily: "'Caveat', cursive", fontSize: 38, color: C.clay, lineHeight: 1 }}>DHWANI</div>
-              <div style={{ fontSize: 9, letterSpacing: '0.28em', textTransform: 'uppercase', color: C.inkSoft, marginTop: 4 }}>memory garden</div>
+              <div style={{
+                fontFamily: "'Fraunces', Georgia, serif",
+                fontStyle: 'italic',
+                fontWeight: 400,
+                fontSize: 30,
+                color: C.clay,
+                lineHeight: 1,
+                letterSpacing: '0.01em',
+              }}>Dhwani</div>
+              <div style={{ fontSize: 9, letterSpacing: '0.28em', textTransform: 'uppercase', color: C.inkSoft, marginTop: 6 }}>memory garden</div>
             </div>
           </div>
 
