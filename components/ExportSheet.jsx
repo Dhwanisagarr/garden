@@ -2,6 +2,7 @@
 import { forwardRef } from 'react'
 import Botanical from '@/components/Botanical'
 import { botanicalForMonth } from '@/lib/botanicals'
+import { getExportPalette } from '@/lib/color-utils'
 
 const MONTH_NAMES = [
   'January','February','March','April','May','June',
@@ -16,57 +17,21 @@ function firstWeekday(year, month1) {
   return new Date(year, month1 - 1, 1).getDay()
 }
 
-const LIGHT_PALETTE = {
-  bg:         '#F7F3EA',
-  paper:      '#FBF8EE',
-  ink:        '#4F4A44',
-  inkSoft:    'rgba(79, 74, 68, 0.55)',
-  inkFaint:   'rgba(79, 74, 68, 0.22)',
-  border:     'rgba(79, 74, 68, 0.22)',
-  clay:       '#9A744A',
-  butter:     '#E3C66A',
-  sage:       '#C6D3B2',
-  emptyDot:   'rgba(79, 74, 68, 0.15)',
-  daisyPetal: '#FBFAF3',
-  daisyCenter:'#E3C66A',
-  daisyEdge:  '#9A744A',
-  textureA:   'rgba(79,74,68,0.045)',
-  textureB:   'rgba(79,74,68,0.028)',
-}
-
-const DARK_PALETTE = {
-  bg:         '#1F251E',
-  paper:      '#2D382B',
-  ink:        '#EAE4DA',
-  inkSoft:    'rgba(234, 228, 218, 0.62)',
-  inkFaint:   'rgba(234, 228, 218, 0.18)',
-  border:     'rgba(234, 228, 218, 0.20)',
-  clay:       '#D8D0C4',
-  butter:     '#D8D0C4',
-  sage:       '#5E7253',
-  emptyDot:   'rgba(234, 228, 218, 0.18)',
-  daisyPetal: '#D8D0C4',
-  daisyCenter:'#1F251E',
-  daisyEdge:  '#5E7253',
-  textureA:   'rgba(234,228,218,0.04)',
-  textureB:   'rgba(234,228,218,0.025)',
-}
-
 /**
  * Beautiful printable composition. Rendered offscreen at exactly
  * A4 portrait base size (794 x 1123 px at 96 DPI); html2canvas
  * scales x3.5 to get ~336 DPI.
  *
- * Theme-aware: picks light or dark palette based on `isDark` prop so
- * the export is a faithful snapshot of what the user is viewing.
+ * Dynamic Palette aware: picks theme palette & background based on `isDark`,
+ * `bgColor`, and `bgImage` props so the export is a faithful snapshot of what the user is viewing.
  */
-const ExportSheet = forwardRef(function ExportSheet({ year, month, images, isDark = false, gardenName = '' }, ref) {
+const ExportSheet = forwardRef(function ExportSheet({ year, month, images, isDark = false, bgColor = null, bgImage = null, gardenName = '' }, ref) {
   const botanical = botanicalForMonth(month, year)
   const dim = daysInMonth(year, month)
   const startDay = firstWeekday(year, month)
   const memoryCount = Object.keys(images || {}).length
   const fullyBloomed = memoryCount === dim && memoryCount > 0
-  const C = isDark ? DARK_PALETTE : LIGHT_PALETTE
+  const C = getExportPalette({ isDark, bgColor })
 
   const totalCells = 42
   const cells = []
@@ -91,13 +56,27 @@ const ExportSheet = forwardRef(function ExportSheet({ year, month, images, isDar
         color: C.ink,
         fontFamily: "'The Seasons', 'Cormorant Garamond', 'Instrument Serif', 'Playfair Display', Georgia, serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji'",
         overflow: 'hidden',
-        backgroundImage:
-          `radial-gradient(${C.textureA} 1px, transparent 1px), radial-gradient(${C.textureB} 1px, transparent 1px)`,
-        backgroundSize: '32px 32px, 17px 17px',
-        backgroundPosition: '0 0, 8px 11px',
+        backgroundImage: bgImage
+          ? `url(${bgImage})`
+          : `radial-gradient(${C.textureA} 1px, transparent 1px), radial-gradient(${C.textureB} 1px, transparent 1px)`,
+        backgroundSize: bgImage ? 'cover' : '32px 32px, 17px 17px',
+        backgroundPosition: bgImage ? 'center' : '0 0, 8px 11px',
+        backgroundRepeat: bgImage ? 'no-repeat' : undefined,
       }}
       aria-hidden
     >
+      {/* Background wallpaper overlay for custom images */}
+      {bgImage && (
+        <div
+          style={{
+            position: 'absolute',
+            inset: 0,
+            pointerEvents: 'none',
+            zIndex: 0,
+            backgroundColor: isDark ? 'rgba(0, 0, 0, 0.45)' : 'rgba(255, 255, 255, 0.35)',
+          }}
+        />
+      )}
       {/* outer hand-drawn frame */}
       <div
         style={{

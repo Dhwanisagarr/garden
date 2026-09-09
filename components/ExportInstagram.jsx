@@ -3,6 +3,7 @@ import { forwardRef, useImperativeHandle, useRef } from 'react'
 import Botanical from '@/components/Botanical'
 import { botanicalForMonth } from '@/lib/botanicals'
 import { gardenTitle } from '@/lib/garden'
+import { getExportPalette } from '@/lib/color-utils'
 
 const MONTH_NAMES = [
   'January','February','March','April','May','June',
@@ -12,36 +13,6 @@ const MONTH_NAMES = [
 export const IG_CAROUSEL = { width: 1080, height: 1350 }
 export const IG_STORY = { width: 1080, height: 1920 }
 export const IG_MAX_CAROUSEL_SLIDES = 10
-
-const LIGHT_PALETTE = {
-  bg: '#F7F3EA',
-  paper: '#FBF8EE',
-  ink: '#4F4A44',
-  inkSoft: 'rgba(79, 74, 68, 0.55)',
-  inkFaint: 'rgba(79, 74, 68, 0.22)',
-  border: 'rgba(79, 74, 68, 0.22)',
-  clay: '#9A744A',
-  daisyPetal: '#FBFAF3',
-  daisyCenter: '#E3C66A',
-  daisyEdge: '#9A744A',
-  textureA: 'rgba(79,74,68,0.045)',
-  textureB: 'rgba(79,74,68,0.028)',
-}
-
-const DARK_PALETTE = {
-  bg: '#1F251E',
-  paper: '#2D382B',
-  ink: '#EAE4DA',
-  inkSoft: 'rgba(234, 228, 218, 0.62)',
-  inkFaint: 'rgba(234, 228, 218, 0.18)',
-  border: 'rgba(234, 228, 218, 0.20)',
-  clay: '#D8D0C4',
-  daisyPetal: '#D8D0C4',
-  daisyCenter: '#1F251E',
-  daisyEdge: '#5E7253',
-  textureA: 'rgba(234,228,218,0.04)',
-  textureB: 'rgba(234,228,218,0.025)',
-}
 
 function sortedMemories(images) {
   return Object.entries(images || {})
@@ -62,7 +33,7 @@ function formatMemoryDate(key) {
   })
 }
 
-function sheetStyle(C, width, height) {
+function sheetStyle(C, width, height, bgImage = null) {
   return {
     position: 'relative',
     width: `${width}px`,
@@ -71,10 +42,12 @@ function sheetStyle(C, width, height) {
     color: C.ink,
     fontFamily: "'The Seasons', 'Cormorant Garamond', 'Instrument Serif', 'Playfair Display', Georgia, serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji'",
     overflow: 'hidden',
-    backgroundImage:
-      `radial-gradient(${C.textureA} 1px, transparent 1px), radial-gradient(${C.textureB} 1px, transparent 1px)`,
-    backgroundSize: '32px 32px, 17px 17px',
-    backgroundPosition: '0 0, 8px 11px',
+    backgroundImage: bgImage
+      ? `url(${bgImage})`
+      : `radial-gradient(${C.textureA} 1px, transparent 1px), radial-gradient(${C.textureB} 1px, transparent 1px)`,
+    backgroundSize: bgImage ? 'cover' : '32px 32px, 17px 17px',
+    backgroundPosition: bgImage ? 'center' : '0 0, 8px 11px',
+    backgroundRepeat: bgImage ? 'no-repeat' : undefined,
     boxSizing: 'border-box',
   }
 }
@@ -117,20 +90,31 @@ function IdentityBlock({ C, gardenName, style = {} }) {
   )
 }
 
-function CarouselCoverSlide({ innerRef, C, gardenName, year, month, botanical, memoryCount }) {
+function CarouselCoverSlide({ innerRef, C, bgImage, isDark, gardenName, year, month, botanical, memoryCount }) {
   return (
     <div ref={innerRef} style={{
-      ...sheetStyle(C, IG_CAROUSEL.width, IG_CAROUSEL.height),
+      ...sheetStyle(C, IG_CAROUSEL.width, IG_CAROUSEL.height, bgImage),
       display: 'flex',
       flexDirection: 'column',
       padding: '72px 64px 56px',
     }}>
-      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 16 }}>
+      {bgImage && (
+        <div
+          style={{
+            position: 'absolute',
+            inset: 0,
+            pointerEvents: 'none',
+            zIndex: 0,
+            backgroundColor: isDark ? 'rgba(0, 0, 0, 0.45)' : 'rgba(255, 255, 255, 0.35)',
+          }}
+        />
+      )}
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 16, position: 'relative', zIndex: 1 }}>
         <DaisyMark C={C} />
         <IdentityBlock C={C} gardenName={gardenName} />
       </div>
 
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center' }}>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', position: 'relative', zIndex: 1 }}>
         <div style={{ display: 'inline-flex', alignItems: 'baseline', gap: 14 }}>
           <span style={{ fontSize: 58, fontWeight: 500, letterSpacing: '-0.01em', color: C.ink }}>
             {MONTH_NAMES[month - 1]}
@@ -171,6 +155,8 @@ function CarouselCoverSlide({ innerRef, C, gardenName, year, month, botanical, m
         color: C.inkSoft,
         opacity: 0.7,
         fontFamily: 'Inter, sans-serif',
+        position: 'relative',
+        zIndex: 1,
       }}>
         Crafted by Dhwani
       </div>
@@ -178,15 +164,26 @@ function CarouselCoverSlide({ innerRef, C, gardenName, year, month, botanical, m
   )
 }
 
-function CarouselMemorySlide({ innerRef, C, gardenName, year, month, botanical, memory, slideIndex, totalSlides }) {
+function CarouselMemorySlide({ innerRef, C, bgImage, isDark, gardenName, year, month, botanical, memory, slideIndex, totalSlides }) {
   return (
     <div ref={innerRef} style={{
-      ...sheetStyle(C, IG_CAROUSEL.width, IG_CAROUSEL.height),
+      ...sheetStyle(C, IG_CAROUSEL.width, IG_CAROUSEL.height, bgImage),
       display: 'flex',
       flexDirection: 'column',
       padding: '56px 52px 48px',
     }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 28 }}>
+      {bgImage && (
+        <div
+          style={{
+            position: 'absolute',
+            inset: 0,
+            pointerEvents: 'none',
+            zIndex: 0,
+            backgroundColor: isDark ? 'rgba(0, 0, 0, 0.45)' : 'rgba(255, 255, 255, 0.35)',
+          }}
+        />
+      )}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 28, position: 'relative', zIndex: 1 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <DaisyMark C={C} size={34} />
           <div>
@@ -228,6 +225,8 @@ function CarouselMemorySlide({ innerRef, C, gardenName, year, month, botanical, 
         border: `1.4px solid ${C.border}`,
         backgroundColor: C.paper,
         boxShadow: '0 8px 28px -12px rgba(0,0,0,0.18)',
+        position: 'relative',
+        zIndex: 1,
       }}>
         <img
           src={memory.img}
@@ -243,6 +242,8 @@ function CarouselMemorySlide({ innerRef, C, gardenName, year, month, botanical, 
         gridTemplateColumns: '120px 1fr',
         gap: 18,
         alignItems: 'end',
+        position: 'relative',
+        zIndex: 1,
       }}>
         <div style={{ height: 110 }}>
           <Botanical kind={botanical.key} count={1} year={year} />
@@ -273,18 +274,29 @@ function CarouselMemorySlide({ innerRef, C, gardenName, year, month, botanical, 
   )
 }
 
-function StorySlide({ innerRef, C, gardenName, year, month, botanical, memories, memoryCount }) {
+function StorySlide({ innerRef, C, bgImage, isDark, gardenName, year, month, botanical, memories, memoryCount }) {
   const cols = memories.length <= 4 ? 2 : 3
   const rows = Math.ceil(memories.length / cols) || 1
 
   return (
     <div ref={innerRef} style={{
-      ...sheetStyle(C, IG_STORY.width, IG_STORY.height),
+      ...sheetStyle(C, IG_STORY.width, IG_STORY.height, bgImage),
       display: 'flex',
       flexDirection: 'column',
       padding: '72px 56px 56px',
     }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 28 }}>
+      {bgImage && (
+        <div
+          style={{
+            position: 'absolute',
+            inset: 0,
+            pointerEvents: 'none',
+            zIndex: 0,
+            backgroundColor: isDark ? 'rgba(0, 0, 0, 0.45)' : 'rgba(255, 255, 255, 0.35)',
+          }}
+        />
+      )}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 28, position: 'relative', zIndex: 1 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
           <DaisyMark C={C} size={44} />
           <IdentityBlock C={C} gardenName={gardenName} />
@@ -306,6 +318,8 @@ function StorySlide({ innerRef, C, gardenName, year, month, botanical, memories,
         gridTemplateRows: `repeat(${rows}, 1fr)`,
         gap: 16,
         minHeight: 0,
+        position: 'relative',
+        zIndex: 1,
       }}>
         {memories.map((memory) => (
           <div key={memory.key} style={{
@@ -344,6 +358,8 @@ function StorySlide({ innerRef, C, gardenName, year, month, botanical, memories,
         gridTemplateColumns: '160px 1fr',
         gap: 20,
         alignItems: 'end',
+        position: 'relative',
+        zIndex: 1,
       }}>
         <div style={{ height: 150 }}>
           <Botanical kind={botanical.key} count={memoryCount} year={year} />
@@ -375,7 +391,7 @@ function StorySlide({ innerRef, C, gardenName, year, month, botanical, memories,
 }
 
 const ExportInstagram = forwardRef(function ExportInstagram(
-  { year, month, images, isDark = false, gardenName = '' },
+  { year, month, images, isDark = false, bgColor = null, bgImage = null, gardenName = '' },
   ref
 ) {
   const coverRef = useRef(null)
@@ -383,7 +399,7 @@ const ExportInstagram = forwardRef(function ExportInstagram(
   const storyRef = useRef(null)
 
   const botanical = botanicalForMonth(month, year)
-  const C = isDark ? DARK_PALETTE : LIGHT_PALETTE
+  const C = getExportPalette({ isDark, bgColor })
   const memories = sortedMemories(images)
   const memoryCount = memories.length
   const carouselMemories = memories.slice(0, IG_MAX_CAROUSEL_SLIDES - 1)
@@ -404,6 +420,8 @@ const ExportInstagram = forwardRef(function ExportInstagram(
       <CarouselCoverSlide
         innerRef={coverRef}
         C={C}
+        bgImage={bgImage}
+        isDark={isDark}
         gardenName={gardenName}
         year={year}
         month={month}
@@ -416,6 +434,8 @@ const ExportInstagram = forwardRef(function ExportInstagram(
           key={memory.key}
           innerRef={(el) => { memoryRefs.current[idx] = el }}
           C={C}
+          bgImage={bgImage}
+          isDark={isDark}
           gardenName={gardenName}
           year={year}
           month={month}
@@ -429,6 +449,8 @@ const ExportInstagram = forwardRef(function ExportInstagram(
       <StorySlide
         innerRef={storyRef}
         C={C}
+        bgImage={bgImage}
+        isDark={isDark}
         gardenName={gardenName}
         year={year}
         month={month}
