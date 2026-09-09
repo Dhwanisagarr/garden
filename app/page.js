@@ -3,7 +3,6 @@
 import { useEffect, useMemo, useRef, useState, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ChevronLeft, ChevronRight, X, Trash2, RefreshCw, ImagePlus, Search } from 'lucide-react'
-import { toast } from 'sonner'
 
 import DaisyToggle from '@/components/DaisyToggle'
 import Botanical from '@/components/Botanical'
@@ -15,8 +14,13 @@ import ExportInstagram from '@/components/ExportInstagram'
 import YearInBloom from '@/components/YearInBloom'
 import WelcomeModal from '@/components/WelcomeModal'
 import SettingsPanel from '@/components/SettingsPanel'
+import LandingPage from '@/components/LandingPage'
+import GuestNotesModal from '@/components/GuestNotesModal'
+import CommunityWallModal from '@/components/CommunityWallModal'
 import { exportAsPDF, exportAsPNG, exportInstagramCarousel, exportInstagramStory } from '@/lib/export'
 import { botanicalForMonth } from '@/lib/botanicals'
+import { getEcosystemForYear } from '@/lib/ecosystems'
+import { deriveDarkModeColor, generateUnifiedPalette, paletteToStyleObject } from '@/lib/color-utils'
 import { buildExportFilename, gardenFilenameStem } from '@/lib/garden'
 import { dateKey, putImage, deleteImage, getMonthImages, listAllMemoryKeys } from '@/lib/daisy-db'
 
@@ -33,12 +37,101 @@ function firstWeekday(year, month1) {
   return new Date(year, month1 - 1, 1).getDay() // 0=Sun
 }
 
+function SidebarContent({ gardenName, ecosystem, isDark, toggleTheme, botanical, memoryCount, year, month, onOpenCommunity, onOpenGuestNotes }) {
+  return (
+    <>
+      <div>
+        <div className="flex items-center justify-between">
+          <div>
+            <p
+              className="font-serif-display italic leading-none text-[hsl(var(--daisy-clay))]"
+              style={{ fontSize: '1.7rem', fontWeight: 400, letterSpacing: '0.01em' }}
+            >
+              {gardenName || 'Dhwani'}
+            </p>
+            <div className="flex items-center gap-2 mt-2">
+              <p className="text-[11px] uppercase tracking-[0.22em] text-muted-foreground">memory garden</p>
+              <span className="text-[9px] uppercase tracking-[0.16em] px-2 py-0.5 rounded-full bg-[hsl(var(--daisy-clay))]/15 text-[hsl(var(--daisy-clay))] font-sans-clean font-medium shrink-0">
+                {ecosystem.badge}
+              </span>
+            </div>
+            <p className="mt-1.5 text-base leading-none" aria-hidden>{ecosystem.icon || '🌼'}</p>
+          </div>
+          <DaisyToggle isDark={isDark} onToggle={toggleTheme} />
+        </div>
+
+        <div className="mt-6">
+          <p className="font-handwritten text-2xl text-[hsl(var(--daisy-ink))]">{botanical.name}</p>
+          <p className="text-xs text-muted-foreground mt-1 italic">
+            {memoryCount === 0 ? 'A still garden. Plant a memory.' :
+              `${memoryCount} ${memoryCount === 1 ? 'bloom' : 'blooms'} this month`}
+          </p>
+        </div>
+
+        {/* Community & Guest Notes Navigation Buttons */}
+        <div className="mt-4 flex flex-col gap-2">
+          {onOpenCommunity && (
+            <button
+              type="button"
+              onClick={onOpenCommunity}
+              className="w-full text-left px-3 py-2 rounded-xl bg-card border border-border/80 hover:border-[hsl(var(--daisy-clay))] text-xs text-foreground font-medium transition-all flex items-center justify-between shadow-xs group"
+            >
+              <span className="flex items-center gap-2">
+                <span>🌸</span> <span className="font-serif-display">Community Wall</span>
+              </span>
+              <span className="text-[10px] text-muted-foreground group-hover:text-[hsl(var(--daisy-clay))] transition-colors">Discover →</span>
+            </button>
+          )}
+
+          {onOpenGuestNotes && (
+            <button
+              type="button"
+              onClick={onOpenGuestNotes}
+              className="w-full text-left px-3 py-2 rounded-xl bg-card border border-border/80 hover:border-[hsl(var(--daisy-clay))] text-xs text-foreground font-medium transition-all flex items-center justify-between shadow-xs group"
+            >
+              <span className="flex items-center gap-2">
+                <span>✍️</span> <span className="font-serif-display">Guest Notes</span>
+              </span>
+              <span className="text-[10px] text-muted-foreground group-hover:text-[hsl(var(--daisy-clay))] transition-colors">Write →</span>
+            </button>
+          )}
+        </div>
+      </div>
+
+      <div className="flex-1 flex items-end justify-center my-2 sm:my-4 min-h-0">
+        <div className="w-full h-[160px] sm:h-[180px] md:h-[50vh] md:min-h-[260px]">
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={`${year}-${month}`}
+              initial={{ opacity: 0, y: 14 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.55 }}
+              className="w-full h-full"
+            >
+              <Botanical kind={botanical.key} count={memoryCount} year={year} />
+            </motion.div>
+          </AnimatePresence>
+        </div>
+      </div>
+
+      <div className="text-[11px] text-muted-foreground font-sans-clean leading-relaxed">
+        <p className="italic">"Ordinary days, gently kept."</p>
+        <p className="mt-2 opacity-70">Your memories live privately on this device.</p>
+        <p className="mt-3 text-[9px] uppercase tracking-[0.28em] opacity-60">Crafted by Dhwani</p>
+      </div>
+    </>
+  )
+}
+
 function App() {
   const today = new Date()
   const [year, setYear]   = useState(today.getFullYear())
   const [month, setMonth] = useState(today.getMonth() + 1) // 1-indexed
   const [images, setImages] = useState({}) // dateKey -> dataURL
   const [isDark, setIsDark] = useState(false)
+  const [bgColor, setBgColor] = useState(null)
+  const [bgImage, setBgImage] = useState(null)
   const [mounted, setMounted] = useState(false)
   const [direction, setDirection] = useState(0) // -1 prev, +1 next
   const [preview, setPreview] = useState(null) // dateKey
@@ -52,7 +145,11 @@ function App() {
   const [view, setView] = useState('month')              // 'month' | 'year'
   const [yearCounts, setYearCounts] = useState({})       // { 1: 5, 2: 12, ... } for the active year
   const [gardenName, setGardenName] = useState('')       // user's personalized name
+  const [showLanding, setShowLanding] = useState(true)   // whether to display landing page entrance
   const [welcomeOpen, setWelcomeOpen] = useState(false)
+  const [mobileNavOpen, setMobileNavOpen] = useState(false)
+  const [guestNotesOpen, setGuestNotesOpen] = useState(false)
+  const [communityOpen, setCommunityOpen] = useState(false)
   const fileInputRef = useRef(null)
   const pendingDayRef = useRef(null)
   const exportSheetRef = useRef(null)
@@ -69,20 +166,16 @@ function App() {
     if (!exportSheetRef.current) return
     try {
       await exportAsPDF(exportSheetRef.current, buildExportName('pdf'), { isDark })
-      toast.success('Saved as PDF', { description: `${MONTH_NAMES[month-1]} ${year}` })
     } catch (e) {
       console.error('PDF export failed', e)
-      toast.error('Could not export PDF')
     }
   }
   const handleExportPNG = async () => {
     if (!exportSheetRef.current) return
     try {
       await exportAsPNG(exportSheetRef.current, buildExportName('png'), { isDark })
-      toast.success('Saved as PNG', { description: `${MONTH_NAMES[month-1]} ${year}` })
     } catch (e) {
       console.error('PNG export failed', e)
-      toast.error('Could not export PNG')
     }
   }
   const handleExportInstagramCarousel = async () => {
@@ -95,10 +188,8 @@ function App() {
         buildInstagramName('instagram_carousel', 'zip'),
         { isDark }
       )
-      toast.success('Instagram carousel saved', { description: `${elements.length} slides · ${MONTH_NAMES[month-1]} ${year}` })
     } catch (e) {
       console.error('Instagram carousel export failed', e)
-      toast.error('Could not export Instagram carousel')
     }
   }
   const handleExportInstagramStory = async () => {
@@ -111,18 +202,16 @@ function App() {
         buildInstagramName('instagram_story', 'png'),
         { isDark }
       )
-      toast.success('Instagram story saved', { description: `${MONTH_NAMES[month-1]} ${year}` })
     } catch (e) {
       console.error('Instagram story export failed', e)
-      toast.error('Could not export Instagram story')
     }
   }
 
-  // ----- mount: theme + load images + load garden name
+  // ----- mount: theme + load images + load garden name & background
   useEffect(() => {
     setMounted(true)
-    const saved = typeof window !== 'undefined' ? localStorage.getItem('daisy-theme') : null
-    const dark = saved === 'dark'
+    const savedTheme = typeof window !== 'undefined' ? localStorage.getItem('daisy-theme') : null
+    const dark = savedTheme === 'dark'
     setIsDark(dark)
     document.documentElement.classList.toggle('dark', dark)
 
@@ -130,9 +219,17 @@ function App() {
     const savedName = typeof window !== 'undefined' ? localStorage.getItem('daisy-garden-name') : null
     if (savedName && savedName.trim()) {
       setGardenName(savedName.trim())
+      setShowLanding(false)
     } else {
-      setWelcomeOpen(true)
+      setShowLanding(true)
     }
+
+    // load custom background preferences
+    const savedBgColor = typeof window !== 'undefined' ? localStorage.getItem('daisy-bg-color') : null
+    if (savedBgColor) setBgColor(savedBgColor)
+
+    const savedBgImage = typeof window !== 'undefined' ? localStorage.getItem('daisy-bg-image') : null
+    if (savedBgImage) setBgImage(savedBgImage)
   }, [])
 
   const handleCreateGarden = (name) => {
@@ -140,9 +237,9 @@ function App() {
     if (!clean) return
     setGardenName(clean)
     try { localStorage.setItem('daisy-garden-name', clean) } catch {}
+    setShowLanding(false)
     setWelcomeOpen(false)
     emitPetals({ kind: botanical?.key, count: 8 })
-    toast.success('Your garden has been planted', { description: clean })
   }
 
   const handleRenameGarden = (name) => {
@@ -150,7 +247,29 @@ function App() {
     if (!clean) return
     setGardenName(clean)
     try { localStorage.setItem('daisy-garden-name', clean) } catch {}
-    toast.success('Garden renamed', { description: clean })
+  }
+
+  const handleSaveBgColor = (color) => {
+    setBgColor(color)
+    try { localStorage.setItem('daisy-bg-color', color) } catch {}
+  }
+
+  const handleSaveBgImage = (dataUrl) => {
+    setBgImage(dataUrl)
+    if (dataUrl) {
+      try { localStorage.setItem('daisy-bg-image', dataUrl) } catch {}
+    } else {
+      try { localStorage.removeItem('daisy-bg-image') } catch {}
+    }
+  }
+
+  const handleResetBg = () => {
+    setBgColor(null)
+    setBgImage(null)
+    try {
+      localStorage.removeItem('daisy-bg-color')
+      localStorage.removeItem('daisy-bg-image')
+    } catch {}
   }
 
   // Load month images whenever year/month changes
@@ -174,9 +293,6 @@ function App() {
     localStorage.setItem('daisy-theme', next ? 'dark' : 'light')
   }
 
-  // Atomic month navigation using native Date arithmetic.
-  // Setting setYear inside a setMonth updater is impure and React 18
-  // StrictMode double-invokes updaters — that caused the year-skipping bug.
   const navigateBy = (delta) => {
     setDirection(delta > 0 ? +1 : -1)
     const next = new Date(year, (month - 1) + delta, 1)
@@ -188,7 +304,7 @@ function App() {
   const goNext = () => navigateBy(+1)
 
   function emitPetals(opts = {}) {
-    const kind = opts.kind // explicit kind wins; otherwise petal renders with month botanical at draw time
+    const kind = opts.kind
     const count = opts.count || 6
     const batch = Array.from({ length: count }).map((_, i) => ({
       id: Math.random().toString(36).slice(2),
@@ -211,6 +327,7 @@ function App() {
     pendingDayRef.current = day
     fileInputRef.current?.click()
   }
+
   const handleFile = async (e) => {
     const file = e.target.files?.[0]
     e.target.value = ''
@@ -225,7 +342,6 @@ function App() {
       await putImage(key, dataUrl)
       const next = { ...images, [key]: dataUrl }
       setImages(next)
-      toast.success('Memory added', { description: `${MONTH_NAMES[month-1]} ${day}` })
       emitPetals({ kind: botanical.key, count: 8 })
 
       // ----- Full month completion celebration (once per month) -----
@@ -246,7 +362,6 @@ function App() {
       }
     } catch (err) {
       console.error(err)
-      toast.error('Could not save image')
     }
   }
 
@@ -256,29 +371,35 @@ function App() {
       setImages(prev => {
         const n = { ...prev }; delete n[key]; return n
       })
-      toast.success('Memory removed')
     } catch (e) {
-      toast.error('Could not remove')
+      console.error('Could not remove image', e)
     }
   }
+
+  const memoryCount = Object.keys(images).length
+  const ecosystem = getEcosystemForYear(year)
+  const botanical = botanicalForMonth(month, year)
+
+  // Unified Theme Palette generation
+  const unifiedPalette = useMemo(() => {
+    return generateUnifiedPalette(bgColor, isDark)
+  }, [bgColor, isDark])
+
+  const paletteStyles = useMemo(() => {
+    return paletteToStyleObject(unifiedPalette)
+  }, [unifiedPalette])
 
   // ---------------- Calendar grid build
   const grid = useMemo(() => {
     const dim = daysInMonth(year, month)
     const start = firstWeekday(year, month)
     const cells = []
-    // leading blanks
     for (let i = 0; i < start; i++) cells.push({ blank: true, key: `b-${i}` })
     for (let d = 1; d <= dim; d++) cells.push({ day: d, key: dateKey(year, month, d) })
-    // pad to multiple of 7
     while (cells.length % 7 !== 0) cells.push({ blank: true, key: `tb-${cells.length}` })
     return cells
   }, [year, month])
 
-  const memoryCount = Object.keys(images).length
-  const botanical = botanicalForMonth(month)
-
-  // Double click vs tap detection: desktop double-click, mobile single-tap
   const isTouchRef = useRef(false)
   useEffect(() => {
     const setTouch = () => { isTouchRef.current = true }
@@ -286,7 +407,6 @@ function App() {
     return () => window.removeEventListener('touchstart', setTouch)
   }, [])
 
-  // Search index: when query changes, scan IndexedDB keys + current month days
   useEffect(() => {
     let cancelled = false
     const q = searchQuery.trim().toLowerCase()
@@ -304,7 +424,6 @@ function App() {
     return () => { cancelled = true }
   }, [searchQuery, year, month])
 
-  // Year-in-bloom counts: load count of memories per month for the active year
   useEffect(() => {
     if (view !== 'year') return
     let cancelled = false
@@ -325,9 +444,8 @@ function App() {
       }
     })()
     return () => { cancelled = true }
-  }, [view, year, images]) // recompute when current-month images change too
+  }, [view, year, images])
 
-  // Year navigation helpers (used only in 'year' view)
   const goPrevYear = () => { setYear(y => y - 1); emitPetals({ count: 4 }) }
   const goNextYear = () => { setYear(y => y + 1); emitPetals({ count: 4 }) }
   const openYearView = () => { setView('year') }
@@ -335,16 +453,46 @@ function App() {
   const handlePickMonth = (m) => {
     setMonth(m)
     setView('month')
-    emitPetals({ kind: botanicalForMonth(m).key, count: 6 })
+    emitPetals({ kind: botanicalForMonth(m, year).key, count: 6 })
   }
 
   if (!mounted) return null
 
   return (
-    <div className="h-screen w-screen overflow-hidden bg-background text-foreground relative">
+    <div
+      className={`h-[100dvh] min-h-[100dvh] w-full overflow-hidden text-foreground relative transition-colors duration-300 ${bgImage ? 'has-bg-image' : ''}`}
+      style={{
+        ...paletteStyles,
+        backgroundColor: 'hsl(var(--background))',
+        ...(bgImage ? {
+          backgroundImage: `url(${bgImage})`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          backgroundRepeat: 'no-repeat',
+        } : {}),
+      }}
+    >
+      <AnimatePresence mode="wait">
+        {showLanding && (
+          <LandingPage
+            key="landing-entrance"
+            onGetStarted={handleCreateGarden}
+            defaultName={gardenName}
+          />
+        )}
+      </AnimatePresence>
+      {/* Background Wallpaper Contrast Overlay */}
+      {bgImage && (
+        <div
+          className={`absolute inset-0 pointer-events-none z-0 ${
+            isDark ? 'bg-black/50 backdrop-blur-[2px]' : 'bg-white/40 backdrop-blur-[2px]'
+          }`}
+        />
+      )}
+
       <SVGDefs />
 
-      {/* Floating petals overlay - themed to current month botanical */}
+      {/* Floating petals overlay */}
       <div className="pointer-events-none absolute inset-0 z-40">
         <AnimatePresence>
           {petals.map(p => (
@@ -366,67 +514,87 @@ function App() {
       {/* hidden file input */}
       <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleFile} />
 
-      <div className="h-full w-full grid grid-cols-[300px_1fr] gap-0">
-        {/* ---------------- SIDEBAR ---------------- */}
-        <aside className="h-full min-h-0 flex flex-col justify-between p-6 border-r border-border/60 relative"
-          style={{ background: 'hsl(var(--daisy-paper))' }}>
-          <div>
-            <div className="flex items-center justify-between">
-              <div>
-                <p
-                  className="font-serif-display italic leading-none text-[hsl(var(--daisy-clay))]"
-                  style={{ fontSize: '1.7rem', fontWeight: 400, letterSpacing: '0.01em' }}
-                >
-                  {gardenName || 'Dhwani'}
-                </p>
-                <p className="text-[11px] uppercase tracking-[0.22em] mt-2 text-muted-foreground">memory garden</p>
-                <p className="mt-1.5 text-base leading-none" aria-hidden>🌼</p>
-              </div>
-              <DaisyToggle isDark={isDark} onToggle={toggleTheme} />
-            </div>
+      {/* Edge Arrow Trigger for Mobile Navigation */}
+      <button
+        type="button"
+        onClick={() => setMobileNavOpen(prev => !prev)}
+        aria-label={mobileNavOpen ? "Close menu" : "Open menu"}
+        title={mobileNavOpen ? "Close menu" : "Open menu"}
+        className="fixed left-0 top-1/2 -translate-y-1/2 z-50 md:hidden flex items-center justify-center w-7 h-12 rounded-r-2xl bg-[hsl(var(--daisy-paper))] border-y border-r border-border/80 shadow-md text-[hsl(var(--daisy-ink))] hover:text-[hsl(var(--daisy-clay))] transition-all duration-200 active:scale-95"
+      >
+        {mobileNavOpen ? (
+          <ChevronLeft className="w-5 h-5" strokeWidth={2} />
+        ) : (
+          <ChevronRight className="w-5 h-5" strokeWidth={2} />
+        )}
+      </button>
 
-            <div className="mt-8">
-              <p className="font-handwritten text-2xl text-[hsl(var(--daisy-ink))]">{botanical.name}</p>
-              <p className="text-xs text-muted-foreground mt-1 italic">
-                {memoryCount === 0 ? 'A still garden. Plant a memory.' :
-                  `${memoryCount} ${memoryCount === 1 ? 'bloom' : 'blooms'} this month`}
-              </p>
-            </div>
-          </div>
+      {/* Mobile Sidebar Slide-Over Drawer */}
+      <AnimatePresence>
+        {mobileNavOpen && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              onClick={() => setMobileNavOpen(false)}
+              className="fixed inset-0 z-40 bg-black/40 backdrop-blur-xs md:hidden"
+            />
+            <motion.aside
+              initial={{ x: '-100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '-100%' }}
+              transition={{ type: 'spring', damping: 25, stiffness: 280 }}
+              className="fixed inset-y-0 left-0 z-40 w-[290px] max-w-[85vw] flex flex-col justify-between p-6 border-r border-border/60 backdrop-blur-md shadow-2xl md:hidden overflow-y-auto"
+              style={{ background: bgImage ? 'hsl(var(--daisy-paper) / 0.94)' : 'hsl(var(--daisy-paper))' }}
+            >
+              <SidebarContent
+                gardenName={gardenName}
+                ecosystem={ecosystem}
+                isDark={isDark}
+                toggleTheme={toggleTheme}
+                botanical={botanical}
+                memoryCount={memoryCount}
+                year={year}
+                month={month}
+                onOpenCommunity={() => setCommunityOpen(true)}
+                onOpenGuestNotes={() => setGuestNotesOpen(true)}
+              />
+            </motion.aside>
+          </>
+        )}
+      </AnimatePresence>
 
-          <div className="flex-1 flex items-end justify-center my-4 min-h-0">
-            <div className="w-full h-[58vh] min-h-[300px]">
-              <AnimatePresence mode="wait">
-                <motion.div
-                  key={`${year}-${month}`}
-                  initial={{ opacity: 0, y: 14 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -8 }}
-                  transition={{ duration: 0.55 }}
-                  className="w-full h-full"
-                >
-                  <Botanical kind={botanical.key} count={memoryCount} />
-                </motion.div>
-              </AnimatePresence>
-            </div>
-          </div>
-
-          <div className="text-[11px] text-muted-foreground font-sans-clean leading-relaxed">
-            <p className="italic">"Ordinary days, gently kept."</p>
-            <p className="mt-2 opacity-70">Your memories live privately on this device.</p>
-            <p className="mt-3 text-[9px] uppercase tracking-[0.28em] opacity-60">Crafted by Dhwani</p>
-          </div>
+      <div className="h-full w-full flex flex-col md:grid md:grid-cols-[270px_1fr] lg:grid-cols-[300px_1fr] gap-0 relative z-10 overflow-hidden">
+        {/* Desktop Sidebar (hidden on mobile) */}
+        <aside
+          className="hidden md:flex md:w-full md:h-full md:min-h-0 flex-col justify-between p-5 lg:p-6 border-r border-border/60 relative backdrop-blur-md transition-colors duration-300"
+          style={{ background: bgImage ? 'hsl(var(--daisy-paper) / 0.88)' : 'hsl(var(--daisy-paper))' }}
+        >
+          <SidebarContent
+            gardenName={gardenName}
+            ecosystem={ecosystem}
+            isDark={isDark}
+            toggleTheme={toggleTheme}
+            botanical={botanical}
+            memoryCount={memoryCount}
+            year={year}
+            month={month}
+            onOpenCommunity={() => setCommunityOpen(true)}
+            onOpenGuestNotes={() => setGuestNotesOpen(true)}
+          />
         </aside>
 
         {/* ---------------- MAIN ---------------- */}
-        <main className="h-full min-h-0 flex flex-col px-8 py-6 relative">
+        <main className="w-full h-full min-h-0 flex-1 flex flex-col justify-start gap-2 sm:gap-3 px-3 sm:px-5 md:px-6 lg:px-8 py-3 sm:py-5 lg:py-6 relative overflow-hidden">
           {/* Header */}
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-6 select-none">
+          <div className="flex flex-wrap items-center justify-between gap-2.5 mb-1 sm:mb-2 w-full shrink-0">
+            <div className="flex items-center gap-1 sm:gap-4 select-none">
               <button onClick={() => view === 'month' ? goPrev() : goPrevYear()}
-                className="p-2 rounded-full hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+                className="p-1.5 sm:p-2 rounded-full hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
                 aria-label={view === 'month' ? 'Previous month' : 'Previous year'}>
-                <ChevronLeft className="w-6 h-6" strokeWidth={1.4} />
+                <ChevronLeft className="w-5 h-5 sm:w-6 sm:h-6" strokeWidth={1.4} />
               </button>
               <AnimatePresence mode="wait">
                 {view === 'month' ? (
@@ -439,11 +607,11 @@ function App() {
                     className="flex flex-col leading-none"
                   >
                     <h1
-                      className="font-serif-display text-3xl md:text-4xl tracking-tight"
+                      className="font-serif-display text-2xl sm:text-3xl md:text-4xl tracking-tight flex items-baseline gap-1.5 sm:gap-2"
                       style={{ fontWeight: 500, letterSpacing: '-0.01em' }}
                     >
                       <span className="text-[hsl(var(--daisy-ink))]">{MONTH_NAMES[month-1]}</span>{' '}
-                      <span className="text-[hsl(var(--daisy-clay))] italic font-handwritten text-4xl md:text-5xl ml-1">{year}</span>
+                      <span className="text-[hsl(var(--daisy-clay))] italic font-handwritten text-3xl sm:text-4xl md:text-5xl ml-0.5 sm:ml-1">{year}</span>
                     </h1>
                   </motion.div>
                 ) : (
@@ -456,23 +624,25 @@ function App() {
                     className="flex flex-col leading-none"
                   >
                     <h1
-                      className="font-serif-display text-3xl md:text-4xl tracking-tight flex items-baseline gap-3"
+                      className="font-serif-display text-2xl sm:text-3xl md:text-4xl tracking-tight flex items-baseline gap-2 sm:gap-3"
                       style={{ fontWeight: 500, letterSpacing: '-0.01em' }}
                     >
-                      <span className="text-[hsl(var(--daisy-clay))] italic font-handwritten text-4xl md:text-5xl">{year}</span>
-                      <span className="text-[11px] tracking-[0.32em] uppercase text-muted-foreground font-sans-clean">in bloom</span>
+                      <span className="text-[hsl(var(--daisy-clay))] italic font-handwritten text-3xl sm:text-4xl md:text-5xl">{year}</span>
+                      <span className="text-[10px] sm:text-[11px] tracking-[0.2em] sm:tracking-[0.32em] uppercase text-muted-foreground font-sans-clean">
+                        {ecosystem.name}
+                      </span>
                     </h1>
                   </motion.div>
                 )}
               </AnimatePresence>
               <button onClick={() => view === 'month' ? goNext() : goNextYear()}
-                className="p-2 rounded-full hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+                className="p-1.5 sm:p-2 rounded-full hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
                 aria-label={view === 'month' ? 'Next month' : 'Next year'}>
-                <ChevronRight className="w-6 h-6" strokeWidth={1.4} />
+                <ChevronRight className="w-5 h-5 sm:w-6 sm:h-6" strokeWidth={1.4} />
               </button>
             </div>
 
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-1.5 sm:gap-3 shrink-0 ml-auto">
               {view === 'month' && (
                 <SearchField
                   isDark={isDark}
@@ -489,7 +659,7 @@ function App() {
                       setHighlightDay(r.day)
                       setTimeout(() => setHighlightDay(null), 2400)
                     }
-                    emitPetals({ kind: botanicalForMonth(r.month).key, count: 4 })
+                    emitPetals({ kind: botanicalForMonth(r.month, r.year).key, count: 4 })
                   }}
                 />
               )}
@@ -498,15 +668,46 @@ function App() {
               <button
                 type="button"
                 onClick={() => view === 'month' ? openYearView() : closeYearView()}
-                aria-label={view === 'month' ? 'Year in Bloom' : 'Back to month'}
-                title={view === 'month' ? 'Year in Bloom' : 'Back to month'}
-                className="w-9 h-9 rounded-full flex items-center justify-center text-muted-foreground hover:text-[hsl(var(--daisy-clay))] hover:bg-muted/70 transition-colors"
+                aria-label={view === 'month' ? 'Year Overview' : 'Back to month'}
+                title={view === 'month' ? 'Year Overview' : 'Back to month'}
+                className="w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center text-muted-foreground hover:text-[hsl(var(--daisy-clay))] hover:bg-muted/70 transition-colors"
               >
                 <YearGridIcon active={view === 'year'} />
               </button>
 
-              {/* Settings */}
-              <SettingsPanel gardenName={gardenName} onSave={handleRenameGarden} />
+              {/* Settings Panel */}
+              <SettingsPanel
+                gardenName={gardenName}
+                bgColor={bgColor}
+                bgImage={bgImage}
+                onSaveName={handleRenameGarden}
+                onSaveBgColor={handleSaveBgColor}
+                onSaveBgImage={handleSaveBgImage}
+                onResetBg={handleResetBg}
+                onOpenLanding={() => setShowLanding(true)}
+              />
+
+              {/* Community Wall Button */}
+              <button
+                type="button"
+                onClick={() => setCommunityOpen(true)}
+                aria-label="Community Wall"
+                title="Community Wall - Browse Shared Memories"
+                className="w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center text-muted-foreground hover:text-[hsl(var(--daisy-clay))] hover:bg-muted/70 transition-colors text-sm"
+              >
+                🌸
+              </button>
+
+              {/* Guest Notes Button */}
+              <button
+                type="button"
+                onClick={() => setGuestNotesOpen(true)}
+                aria-label="Guest Notes"
+                title="Guest Notes - Write a Memory"
+                className="w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center text-muted-foreground hover:text-[hsl(var(--daisy-clay))] hover:bg-muted/70 transition-colors text-sm"
+              >
+                ✍️
+              </button>
 
               <button
                 onClick={() => {
@@ -516,7 +717,7 @@ function App() {
                   setView('month')
                   emitPetals()
                 }}
-                className="text-xs uppercase tracking-[0.22em] text-muted-foreground hover:text-foreground transition-colors font-sans-clean"
+                className="text-[10px] sm:text-xs uppercase tracking-[0.18em] sm:tracking-[0.22em] text-muted-foreground hover:text-foreground transition-colors font-sans-clean"
               >
                 Today
               </button>
@@ -532,19 +733,19 @@ function App() {
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 1.04 }}
                 transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-                className="flex-1 min-h-0 flex flex-col"
+                className="flex-1 min-h-0 flex flex-col justify-start w-full md:h-full gap-1"
               >
                 {/* Weekday strip */}
-                <div className="grid grid-cols-7 gap-3 mb-2 px-1">
+                <div className="grid grid-cols-7 gap-1.5 sm:gap-2.5 md:gap-3 shrink-0 mb-1 px-0.5 sm:px-1">
                   {WEEKDAYS.map(w => (
-                    <div key={w} className="text-center text-[11px] tracking-[0.18em] uppercase text-muted-foreground/70 font-sans-clean">
+                    <div key={w} className="text-center text-[10px] sm:text-[11px] tracking-[0.12em] sm:tracking-[0.18em] uppercase text-muted-foreground/70 font-sans-clean">
                       {w}
                     </div>
                   ))}
                 </div>
 
-                {/* Calendar grid - fills remaining viewport */}
-                <div className="flex-1 min-h-0 relative">
+                {/* Calendar grid - natural aspect ratio on mobile, full grid on desktop */}
+                <div className="w-full relative md:flex-1 md:h-full md:min-h-0">
                   <AnimatePresence initial={false} custom={direction} mode="wait">
                     <motion.div
                       key={`${year}-${month}-grid`}
@@ -553,7 +754,7 @@ function App() {
                       animate={{ opacity: 1, x: 0 }}
                       exit={{ opacity: 0, x: -direction * 50 }}
                       transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-                      className="absolute inset-0 grid grid-cols-7 gap-3 auto-rows-fr"
+                      className="grid grid-cols-7 gap-1.5 sm:gap-2.5 md:gap-3 w-full md:absolute md:inset-0 md:auto-rows-fr md:h-full"
                     >
                       {grid.map((cell, idx) => {
                         if (cell.blank) {
@@ -623,6 +824,16 @@ function App() {
 
       {/* Welcome / first-time setup */}
       <WelcomeModal open={welcomeOpen && mounted} onCreate={handleCreateGarden} />
+
+      {/* Public Guest Notes Modal (Submission Only) */}
+      <GuestNotesModal isOpen={guestNotesOpen} onClose={() => setGuestNotesOpen(false)} />
+
+      {/* Public Community Wall Modal (Approved Public Memories Grid) */}
+      <CommunityWallModal
+        isOpen={communityOpen}
+        onClose={() => setCommunityOpen(false)}
+        onOpenWriteNote={() => setGuestNotesOpen(true)}
+      />
 
       {/* Offscreen export sheet (rendered hidden, captured by html2canvas) */}
       <ExportSheet ref={exportSheetRef} year={year} month={month} images={images} isDark={isDark} gardenName={gardenName} />
@@ -724,7 +935,7 @@ function DayTile({ day, dKey, img, isToday, onActivate, onPreview, onDelete, onR
       whileHover={{ y: -2 }}
       animate={highlighted ? { scale: [1, 1.06, 1] } : { scale: 1 }}
       transition={{ type: 'spring', stiffness: 280, damping: 22, duration: highlighted ? 1.2 : undefined }}
-      className="relative paper-tile hand-drawn-border rounded-lg overflow-hidden cursor-pointer group min-h-0 w-full h-full"
+      className="relative paper-tile hand-drawn-border rounded-md sm:rounded-lg overflow-hidden cursor-pointer group w-full min-h-[clamp(44px,8.5vh,110px)] max-h-[clamp(65px,13.5vh,160px)] aspect-[1/1.04] sm:aspect-square md:aspect-auto md:h-full md:min-h-0 flex flex-col"
     >
       {highlighted && (
         <motion.div
@@ -937,7 +1148,7 @@ function SearchField({ value, onChange, results, open, onOpenChange, onPickResul
 
   return (
     <div ref={wrapperRef} className="relative">
-      <div className="flex items-center gap-2 px-3 h-9 rounded-full bg-card/70 border border-border/70 hover:border-border focus-within:border-[hsl(var(--daisy-clay))] transition-colors min-w-[230px]">
+      <div className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 h-8 sm:h-9 rounded-full bg-card/70 border border-border/70 hover:border-border focus-within:border-[hsl(var(--daisy-clay))] transition-colors w-full max-w-[130px] sm:max-w-[200px] md:min-w-[220px]">
         <Search className="w-4 h-4 text-muted-foreground" strokeWidth={1.5} />
         <input
           ref={inputRef}

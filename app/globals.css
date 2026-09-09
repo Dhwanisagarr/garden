@@ -1,4 +1,23 @@
-@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,400&family=Caveat:wght@500;600&family=Inter:wght@400;500&family=Noto+Color+Emoji&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Alex+Brush&family=Pinyon+Script&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400;1,600&family=Instrument+Serif:ital@0;1&family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400;1,600&family=Caveat:wght@500;600&family=Inter:wght@400;500&display=swap');
+
+/* Local Font Face for The Seasons when available */
+@font-face {
+  font-family: 'The Seasons';
+  src: url('/fonts/TheSeasons-Regular.woff2') format('woff2'),
+       url('/fonts/TheSeasons-Regular.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'The Seasons';
+  src: url('/fonts/TheSeasons-Italic.woff2') format('woff2'),
+       url('/fonts/TheSeasons-Italic.ttf') format('truetype');
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
 
 @tailwind base;
 @tailwind components;
@@ -76,7 +95,7 @@
   }
   html, body {
     @apply bg-background text-foreground;
-    font-family: 'Fraunces', Georgia, serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji';
+    font-family: 'The Seasons', 'Cormorant Garamond', 'Instrument Serif', 'Playfair Display', Georgia, serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji';
     font-feature-settings: 'ss01', 'ss02';
     overscroll-behavior: none;
   }
@@ -90,9 +109,10 @@
 }
 
 @layer utilities {
-  .font-serif-display { font-family: 'Fraunces', Georgia, serif; }
+  .font-serif-display { font-family: 'The Seasons', 'Cormorant Garamond', 'Instrument Serif', 'Playfair Display', Georgia, serif; }
   .font-handwritten { font-family: 'Caveat', cursive; }
   .font-sans-clean { font-family: 'Inter', system-ui, sans-serif; }
+  .font-botanical-script { font-family: 'Alex Brush', 'Pinyon Script', 'Caveat', cursive; }
 
   .paper-tile {
     background-color: hsl(var(--daisy-paper));
@@ -100,6 +120,11 @@
       0 1px 0 hsl(var(--daisy-ink) / 0.04),
       0 1px 3px hsl(var(--daisy-ink) / 0.08),
       inset 0 0 0 1px hsl(var(--daisy-ink) / 0.05);
+  }
+
+  .has-bg-image .paper-tile {
+    background-color: hsl(var(--daisy-paper) / 0.90);
+    backdrop-filter: blur(6px);
   }
 
   /* hand-drawn looking border using svg mask */

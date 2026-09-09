@@ -1,5 +1,4 @@
 import './globals.css'
-import { Toaster } from 'sonner'
 import { Analytics } from '@vercel/analytics/next'
 
 export const metadata = {
@@ -12,7 +11,6 @@ export default function RootLayout({ children }) {
     <html lang="en" suppressHydrationWarning>
       <body className="antialiased">
         {children}
-        <Toaster position="bottom-center" toastOptions={{ style: { fontFamily: 'Fraunces, serif' } }} />
         <Analytics />
       </body>
     </html>

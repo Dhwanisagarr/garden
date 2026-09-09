@@ -1,0 +1,22 @@
+[
+  {
+    "id": "d20c4197-d96f-4d74-bd83-c92a5b443b09",
+    "name": "devi",
+    "message": "hehe is this sooo cool",
+    "month": "September",
+    "year": 2026,
+    "photoUrl": "/uploads/guest-notes/38d9f2e6-0c46-43d7-ae50-7a7530f79e8c.png",
+    "createdAt": "2026-09-08T17:18:00.569Z",
+    "status": "approved"
+  },
+  {
+    "id": "29d11858-fc88-45f6-bfc1-b110992abe97",
+    "name": "dhwani",
+    "message": "heh nice",
+    "month": "September",
+    "year": 2026,
+    "photoUrl": "/uploads/guest-notes/36d8c7c8-f325-44dc-bdb6-a488e35aefc5.png",
+    "createdAt": "2026-09-08T17:00:01.437Z",
+    "status": "approved"
+  }
+]

@@ -69,7 +69,7 @@ function sheetStyle(C, width, height) {
     height: `${height}px`,
     backgroundColor: C.bg,
     color: C.ink,
-    fontFamily: "'Fraunces', Georgia, serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji'",
+    fontFamily: "'The Seasons', 'Cormorant Garamond', 'Instrument Serif', 'Playfair Display', Georgia, serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji'",
     overflow: 'hidden',
     backgroundImage:
       `radial-gradient(${C.textureA} 1px, transparent 1px), radial-gradient(${C.textureB} 1px, transparent 1px)`,
@@ -97,7 +97,7 @@ function IdentityBlock({ C, gardenName, style = {} }) {
   return (
     <div style={{ lineHeight: 1, ...style }}>
       <div style={{
-        fontFamily: "'Fraunces', Georgia, serif",
+        fontFamily: "'The Seasons', 'Cormorant Garamond', 'Instrument Serif', 'Playfair Display', Georgia, serif",
         fontStyle: 'italic',
         fontWeight: 400,
         fontSize: 34,
@@ -150,7 +150,7 @@ function CarouselCoverSlide({ innerRef, C, gardenName, year, month, botanical, m
           {memoryCount} {memoryCount === 1 ? 'memory' : 'memories'}
         </div>
         <div style={{ width: '100%', height: 280, marginTop: 36 }}>
-          <Botanical kind={botanical.key} count={memoryCount} />
+          <Botanical kind={botanical.key} count={memoryCount} year={year} />
         </div>
         <div style={{
           marginTop: 24,
@@ -245,7 +245,7 @@ function CarouselMemorySlide({ innerRef, C, gardenName, year, month, botanical, 
         alignItems: 'end',
       }}>
         <div style={{ height: 110 }}>
-          <Botanical kind={botanical.key} count={1} />
+          <Botanical kind={botanical.key} count={1} year={year} />
         </div>
         <div>
           <div style={{
@@ -282,27 +282,20 @@ function StorySlide({ innerRef, C, gardenName, year, month, botanical, memories,
       ...sheetStyle(C, IG_STORY.width, IG_STORY.height),
       display: 'flex',
       flexDirection: 'column',
-      padding: '72px 56px 52px',
+      padding: '72px 56px 56px',
     }}>
-      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 16, marginBottom: 36 }}>
-        <DaisyMark C={C} />
-        <IdentityBlock C={C} gardenName={gardenName} />
-      </div>
-
-      <div style={{ textAlign: 'center', marginBottom: 28 }}>
-        <div style={{ display: 'inline-flex', alignItems: 'baseline', gap: 12 }}>
-          <span style={{ fontSize: 52, fontWeight: 500, color: C.ink }}>{MONTH_NAMES[month - 1]}</span>
-          <span style={{ fontFamily: "'Caveat', cursive", fontSize: 60, color: C.clay }}>{year}</span>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 28 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+          <DaisyMark C={C} size={44} />
+          <IdentityBlock C={C} gardenName={gardenName} />
         </div>
-        <div style={{
-          marginTop: 8,
-          fontSize: 11,
-          letterSpacing: '0.28em',
-          textTransform: 'uppercase',
-          color: C.inkSoft,
-          fontFamily: 'Inter, sans-serif',
-        }}>
-          {memoryCount} {memoryCount === 1 ? 'memory' : 'memories'} · {botanical.name.toLowerCase()}
+        <div style={{ textAlign: 'right' }}>
+          <div style={{ fontSize: 38, fontWeight: 500, letterSpacing: '-0.01em', color: C.ink }}>
+            {MONTH_NAMES[month - 1]}
+          </div>
+          <div style={{ fontFamily: "'Caveat', cursive", fontSize: 36, color: C.clay, lineHeight: 1 }}>
+            {year}
+          </div>
         </div>
       </div>
 
@@ -311,7 +304,7 @@ function StorySlide({ innerRef, C, gardenName, year, month, botanical, memories,
         display: 'grid',
         gridTemplateColumns: `repeat(${cols}, 1fr)`,
         gridTemplateRows: `repeat(${rows}, 1fr)`,
-        gap: 14,
+        gap: 16,
         minHeight: 0,
       }}>
         {memories.map((memory) => (
@@ -353,7 +346,7 @@ function StorySlide({ innerRef, C, gardenName, year, month, botanical, memories,
         alignItems: 'end',
       }}>
         <div style={{ height: 150 }}>
-          <Botanical kind={botanical.key} count={memoryCount} />
+          <Botanical kind={botanical.key} count={memoryCount} year={year} />
         </div>
         <div>
           <div style={{
@@ -389,7 +382,7 @@ const ExportInstagram = forwardRef(function ExportInstagram(
   const memoryRefs = useRef([])
   const storyRef = useRef(null)
 
-  const botanical = botanicalForMonth(month)
+  const botanical = botanicalForMonth(month, year)
   const C = isDark ? DARK_PALETTE : LIGHT_PALETTE
   const memories = sortedMemories(images)
   const memoryCount = memories.length

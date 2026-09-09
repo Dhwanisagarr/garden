@@ -61,7 +61,7 @@ const DARK_PALETTE = {
  * the export is a faithful snapshot of what the user is viewing.
  */
 const ExportSheet = forwardRef(function ExportSheet({ year, month, images, isDark = false, gardenName = '' }, ref) {
-  const botanical = botanicalForMonth(month)
+  const botanical = botanicalForMonth(month, year)
   const dim = daysInMonth(year, month)
   const startDay = firstWeekday(year, month)
   const memoryCount = Object.keys(images || {}).length
@@ -89,7 +89,7 @@ const ExportSheet = forwardRef(function ExportSheet({ year, month, images, isDar
         height: '1123px',
         backgroundColor: C.bg,
         color: C.ink,
-        fontFamily: "'Fraunces', Georgia, serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji'",
+        fontFamily: "'The Seasons', 'Cormorant Garamond', 'Instrument Serif', 'Playfair Display', Georgia, serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji'",
         overflow: 'hidden',
         backgroundImage:
           `radial-gradient(${C.textureA} 1px, transparent 1px), radial-gradient(${C.textureB} 1px, transparent 1px)`,
@@ -125,7 +125,7 @@ const ExportSheet = forwardRef(function ExportSheet({ year, month, images, isDar
             </svg>
             <div style={{ lineHeight: 1 }}>
               <div style={{
-                fontFamily: "'Fraunces', Georgia, serif",
+                fontFamily: "'The Seasons', 'Cormorant Garamond', 'Instrument Serif', 'Playfair Display', Georgia, serif",
                 fontStyle: 'italic',
                 fontWeight: 400,
                 fontSize: 30,
@@ -234,7 +234,7 @@ const ExportSheet = forwardRef(function ExportSheet({ year, month, images, isDar
         }}>
           <div style={{ height: 230, display: 'flex', alignItems: 'flex-end' }}>
             <div style={{ width: '100%', height: '100%' }}>
-              <Botanical kind={botanical.key} count={memoryCount} />
+              <Botanical kind={botanical.key} count={memoryCount} year={year} />
             </div>
           </div>
 

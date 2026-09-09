@@ -14,13 +14,13 @@ function daysInMonth(year, month1) {
 
 export default function YearInBloom({ year, memoryCounts = {}, onSelectMonth, currentMonth }) {
   return (
-    <div className="grid grid-cols-3 grid-rows-4 gap-4 h-full">
+    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 h-full overflow-y-auto md:overflow-hidden p-1">
       {Array.from({ length: 12 }).map((_, i) => {
         const m = i + 1
         const count = memoryCounts[m] || 0
         const dim = daysInMonth(year, m)
         const full = count === dim && count > 0
-        const botanical = botanicalForMonth(m)
+        const botanical = botanicalForMonth(m, year)
         const isCurrent = currentMonth === m
 
         return (
@@ -76,7 +76,7 @@ export default function YearInBloom({ year, memoryCounts = {}, onSelectMonth, cu
 
             {/* botanical preview - fills the card */}
             <div className="relative flex-1 min-h-0 mt-1 mb-1">
-              <Botanical kind={botanical.key} count={count} />
+              <Botanical kind={botanical.key} count={count} year={year} />
             </div>
 
             {/* memories label */}
